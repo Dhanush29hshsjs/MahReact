@@ -417,16 +417,16 @@ h2 {
   display: flex;
   align-items: center;
   position: relative;
-  overflow: hidden; /* Hide overflow */
-  transition: width 0.3s ease; /* Smooth width transition */
+  overflow: hidden;
+  transition: box-shadow 0.3s ease , width 1.3s ease; /* Smooth width transition */
 }
 
 .toolbar-button-text {
-  margin-left: 8px; /* Space between icon and text */
-  white-space: nowrap; /* Prevent text from wrapping */
-  width: 0; /* Initially hidden */
-  opacity: 0; /* Initially hidden */
-  transition: width 0.3s ease, opacity 0.5s ease; /* Transition for width and opacity */
+  margin-left: 8px;
+  white-space: nowrap;
+  width: 0;
+  opacity: 0;
+  transition: width 0.3s ease, opacity 0.3s ease , width 1.3s ease; /* Transition for width and opacity */
 }
 [id*='UserProfileButton'].toolbar-button:hover {
   width: auto; /* Adjust width to fit text on hover */
@@ -471,7 +471,7 @@ h2 {
   width: 100%;
   background-color: white;
   min-height: 300px;
-  display: flex;
+  /* display: flex; */
 }
 .notificationsDivTab:hover{
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -671,3 +671,14 @@ h2 {
   50% { border-color: white; }
 }
 
+.flex-display {
+  display: flex;
+}
+.toolbar-button-icon {
+  color: #48effb; /* Default color */
+  transition:color 0.3s ease ;
+}
+
+.toolbar-button:hover .toolbar-button-icon {
+  color: #eb4743 !important; /* Color on hover */
+}

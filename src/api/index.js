@@ -11,12 +11,21 @@ export const getTableData = async () => {
 
   return data;
 };
+export const getNotificationsByCustomerId = async (customerId,top)=>{
+  var url;
+if (top == 0)
+ url =`EnquiryComments?$filter=customerId eq ${customerId}`;
+else
+  url =`EnquiryComments?$filter=customerId eq ${customerId}&$orderby=createdAt desc&$top=${top}`
+const data = await instance.get(url);
+return data.value || data;
+};
 export const getUserByLoginCred = async(userName , password)=>{
   const url = `Customer?$filter=email eq '${userName}' and password eq '${password}'`;
   const {data} = await instance.get(url);
     
   return  data.value || data;
-}
+};
 
 // export const getTableCount = async () => {
 //   const { data } = await instance.get("/PAN_Details_APR/$count");

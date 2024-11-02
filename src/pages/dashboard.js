@@ -15,6 +15,15 @@ import {
   mdiCashCheck,
   mdiAlertCircle,
   mdiCashRemove,
+  mdiAccountVoice,
+  mdiCashClock,
+  mdiTruckDeliveryOutline,
+  mdiCheckDecagram,
+  mdiCheckDecagramOutline,
+  mdiTextBoxCheckOutline,
+  mdiAccountCreditCardOutline,
+  mdiTextBoxEditOutline,
+  mdiBellBadgeOutline,
 } from "@mdi/js";
 import Icon from "@mdi/react";
 import propic from "../profilePic.jpg";
@@ -22,7 +31,7 @@ import "../App.css";
 import uploadimage from "../userdocuments.jpg";
 import MyAppBar from "../components/Appbar";
 import Appfooter from "../components/Appfooter";
-import { getUserByLoginCred } from "../api";
+import { getUserByLoginCred, getNotificationsByCustomerId } from "../api";
 import {
   SpinnerCircular,
   SpinnerDotted,
@@ -36,6 +45,8 @@ const Dashboard = () => {
   const email = "Pradeep@gmail.com";
   const password = "1234";
   const [userInfo, setUserInfo] = useState({});
+  const [notifications, setNotifications] = useState([]);
+  const [purchaseRequests, setPurchaseRequests] = useState([]);
   const [userInfoLoader, setUserInfoLoader] = useState(true);
   const [notificationsLoader, setnotificationsLoader] = useState(true);
   const [PurchaseRequestsLoader, setPurchaseRequestsLoader] = useState(true);
@@ -50,10 +61,54 @@ const Dashboard = () => {
       } catch (error) {
         console.error("Failed to fetch user info:", error);
       }
+      setUserInfoLoader(false);
     };
 
     fetchUserInfo();
   }, []);
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!userInfo) return; // Only proceed if userInfo is set
+      try {
+        setnotificationsLoader(true);
+        const data = await getNotificationsByCustomerId(userInfo.customerId,30);
+        data.data.value.forEach((notification) => {
+          switch (notification.commentsText.substring(11)) {
+            case "Negotiated Quotation":
+              notification.icon = mdiTextBoxEditOutline;
+              break;
+            case "Payment Reminder":
+              notification.icon = mdiCashClock;
+              break;
+            case "Out for Delivery":
+              notification.icon = mdiTruckDeliveryOutline;
+              break;
+            case "Payment Confirmed":
+              notification.icon = mdiCashCheck;
+              break;
+              case "Quotation Sent":
+                notification.icon = mdiTextBoxCheckOutline;
+                break; 
+                case "Sales Order Release":
+                  notification.icon = mdiAccountCreditCardOutline;
+                  break; 
+                  case "Accepted":
+                    notification.icon = mdiCheckDecagramOutline;
+                    break;   
+            default:
+              notification.icon = mdiBellBadgeOutline;
+              break;
+          }
+        });
+        setNotifications(data.data.value);
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+      }
+      setnotificationsLoader(false);
+    };
+
+    fetchNotifications();
+  }, [userInfo]);
   const [uploads, setUploads] = useState({
     upload1: false,
     upload2: false,
@@ -299,10 +354,12 @@ const Dashboard = () => {
                   <h2>Purchase Requests</h2>
                 </div>
                 <div
-                  className="section-content"
+                  className={`section-content ${
+                    PurchaseRequestsLoader ? "flex-display" : ""
+                  }`}
                   style={{
                     scrollbarColor: "#d7cbff #f1f1f1",
-                    display: "flex",
+                    // display: "flex",
                     minHeight: "200px",
                   }}
                 >
@@ -405,9 +462,11 @@ const Dashboard = () => {
                   <h2>Purchase Orders</h2>
                 </div>
                 <div
-                  className="section-content"
+                  className={`section-content ${
+                    PurchaseOrdersLoader ? "flex-display" : ""
+                  }`}
                   style={{
-                    display: "flex",
+                    // display: "flex",
                     minHeight: "200px",
                     scrollbarColor: "rgb(255 199 204) rgb(241, 241, 241)",
                   }}
@@ -498,7 +557,11 @@ const Dashboard = () => {
                     </span>
                   </button>
                 </div>
-                <div className="notificationsDivTab">
+                <div
+                  className={`notificationsDivTab ${
+                    notificationsLoader ? "flex-display" : ""
+                  }`}
+                >
                   {notificationsLoader ? (
                     <SpinnerCircularSplit
                       style={{ margin: "auto" }}
@@ -506,7 +569,25 @@ const Dashboard = () => {
                     ></SpinnerCircularSplit>
                   ) : (
                     <ul style={{ listStyleType: "none", padding: 0 }}>
-                      <li
+                      {notifications.map((notification) => (
+                        <li
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            fontFamily: "auto",
+                          }}
+                        >
+                          <Icon
+                            path={notification.icon}
+                            size={1}
+                            color="orangered"
+                          />
+                          <span style={{ marginLeft: "10px", fontFamily:'sans-serif'}}>
+                            {notification.commentsText}
+                          </span>
+                        </li>
+                      ))}
+                      {/* <li
                         style={{
                           display: "flex",
                           alignItems: "center",
@@ -761,7 +842,7 @@ const Dashboard = () => {
                         <span style={{ marginLeft: "10px" }}>
                           Order #1020 - Shipped
                         </span>
-                      </li>
+                      </li> */}
                     </ul>
                   )}
                 </div>
@@ -792,65 +873,102 @@ const Dashboard = () => {
                     }}
                   />
                 </div>
-                <div className="section-contentDocs" style={{    display: 'flex',
-    minHeight: '200px'}}>
-                  {UploadSectionLoader?(
-                     <SpinnerCircularSplit
-                     style={{ margin: "auto" }}
-                     color="rgb(255 244 233)"
-                   ></SpinnerCircularSplit>
-                  ):(
+                <div
+                  className={`section-contentDocs ${
+                    UploadSectionLoader ? "flex-display" : ""
+                  }`}
+                  style={{
+                    minHeight: "200px",
+                  }}
+                >
+                  {UploadSectionLoader ? (
+                    <SpinnerCircularSplit
+                      style={{ margin: "auto" }}
+                      color="rgb(255 244 233)"
+                    ></SpinnerCircularSplit>
+                  ) : (
                     <ul>
-                    {[
-                      { name: 'GST Certificate', key: 'gstCertificate' },
-                      { name: 'PAN Card', key: 'panCard' },
-                      { name: 'Bank Mandate', key: 'bankMandate' },
-                    ].map((doc, index) => (
-                      <li key={doc.key}>
-                        <span>{doc.name}</span>
-                        {uploads[doc.key] ? (
-                          <>
-                            <Icon path={mdiCheckCircle} size={1} color="green" />
-                            <span style={{ marginLeft: '5px', color: 'lightcyan' }}>Uploaded</span>
-                            <button 
-                              onClick={() => handleRemove(doc.key)} 
-                              className="button"  
-                              style={{
-                                marginTop: '-20px',
-                                marginBottom: '-20px',
-                                overflow: 'hidden',
-                                height: '38px',
-                                borderRadius: '10px',
-                                backgroundColor: '#ffffff52',
-                                border: 'none'
-                              }}>
-                              <Icon path={mdiDeleteForever} size={1} color="red" />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <Icon path={mdiProgressClock} size={1} color="orangered" />
-                            <span style={{ marginLeft: '5px', color: 'lightcyan' }}>Pending</span>
-                            <button 
-                              onClick={() => handleUpload(doc.key)} 
-                              className="button"  
-                              style={{
-                                marginTop: '-20px',
-                                marginBottom: '-20px',
-                                overflow: 'hidden',
-                                height: '38px',
-                                borderRadius: '10px',
-                                backgroundColor: '#ffffff52',
-                                border: 'none'
-                              }}>
-                              <Icon path={mdiCloudUpload} size={1} color="white" />
-                            </button>
-                          </>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-              
+                      {[
+                        { name: "GST Certificate", key: "gstCertificate" },
+                        { name: "PAN Card", key: "panCard" },
+                        { name: "Bank Mandate", key: "bankMandate" },
+                      ].map((doc, index) => (
+                        <li key={doc.key}>
+                          <span>{doc.name}</span>
+                          {uploads[doc.key] ? (
+                            <>
+                              <Icon
+                                path={mdiCheckCircle}
+                                size={1}
+                                color="green"
+                              />
+                              <span
+                                style={{
+                                  marginLeft: "5px",
+                                  color: "lightcyan",
+                                }}
+                              >
+                                Uploaded
+                              </span>
+                              <button
+                                onClick={() => handleRemove(doc.key)}
+                                className="button"
+                                style={{
+                                  marginTop: "-20px",
+                                  marginBottom: "-20px",
+                                  overflow: "hidden",
+                                  height: "38px",
+                                  borderRadius: "10px",
+                                  backgroundColor: "#ffffff52",
+                                  border: "none",
+                                }}
+                              >
+                                <Icon
+                                  path={mdiDeleteForever}
+                                  size={1}
+                                  color="red"
+                                />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <Icon
+                                path={mdiProgressClock}
+                                size={1}
+                                color="orangered"
+                              />
+                              <span
+                                style={{
+                                  marginLeft: "5px",
+                                  color: "lightcyan",
+                                }}
+                              >
+                                Pending
+                              </span>
+                              <button
+                                onClick={() => handleUpload(doc.key)}
+                                className="button"
+                                style={{
+                                  marginTop: "-20px",
+                                  marginBottom: "-20px",
+                                  overflow: "hidden",
+                                  height: "38px",
+                                  borderRadius: "10px",
+                                  backgroundColor: "#ffffff52",
+                                  border: "none",
+                                }}
+                              >
+                                <Icon
+                                  path={mdiCloudUpload}
+                                  size={1}
+                                  color="white"
+                                />
+                              </button>
+                            </>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
                   )}
                 </div>
               </section>
