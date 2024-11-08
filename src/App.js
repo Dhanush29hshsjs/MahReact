@@ -541,7 +541,7 @@ function App() {
         <Routes>
         {/* <Route path="/" element={<PrObjectPage />} /> */}
           <Route path="/" element={<Dashboard />} />
-          <Route path="/Profile" element={<UserProfile />} />
+          <Route path="/Profile/:cId" element={<UserProfile />} />
           <Route path="/Inquiry" element={<Orders />} />
           <Route path="/Inquiry/:id" element={<PrObjectPage />} />
           {/* <Route path="/contact" element={<ContactPage />} /> */}

@@ -24,14 +24,15 @@ import {
   mdiAccountCreditCardOutline,
   mdiTextBoxEditOutline,
   mdiBellBadgeOutline,
+  mdiUpdate,
 } from "@mdi/js";
 import Icon from "@mdi/react";
-import propic from "../profilePic.jpg";
+import emptyProfilePic from "../emptyProfilePic.webp";
 import "../App.css";
 import uploadimage from "../userdocuments.jpg";
 import MyAppBar from "../components/Appbar";
 import Appfooter from "../components/Appfooter";
-import { getUserByLoginCred, getNotificationsByCustomerId } from "../api";
+import { getUserByLoginCred, getNotificationsByCustomerId, getPurchaseRequestsByCustomerId, getPurchaseOrdersByCustomerId, uploadUserFile, getUserFileByCustomerId, deleteUserFileByCustomerId } from "../api";
 import {
   SpinnerCircular,
   SpinnerDotted,
@@ -43,10 +44,15 @@ import {
 
 const Dashboard = () => {
   const email = "Pradeep@gmail.com";
-  const password = "1234";
+  const password = "11111";
+  sessionStorage.setItem('pass', password);
+
   const [userInfo, setUserInfo] = useState({});
   const [notifications, setNotifications] = useState([]);
   const [purchaseRequests, setPurchaseRequests] = useState([]);
+  const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [docUrls ,setDocUrls] =useState({});
+  const [uploads, setUploads] = useState({});
   const [userInfoLoader, setUserInfoLoader] = useState(true);
   const [notificationsLoader, setnotificationsLoader] = useState(true);
   const [PurchaseRequestsLoader, setPurchaseRequestsLoader] = useState(true);
@@ -70,7 +76,7 @@ const Dashboard = () => {
     const fetchNotifications = async () => {
       if (!userInfo) return; // Only proceed if userInfo is set
       try {
-        setnotificationsLoader(true);
+        // setnotificationsLoader(true);
         const data = await getNotificationsByCustomerId(userInfo.customerId,30);
         data.data.value.forEach((notification) => {
           switch (notification.commentsText.substring(11)) {
@@ -86,45 +92,206 @@ const Dashboard = () => {
             case "Payment Confirmed":
               notification.icon = mdiCashCheck;
               break;
-              case "Quotation Sent":
+              case "Quotation Received":
                 notification.icon = mdiTextBoxCheckOutline;
                 break; 
-                case "Sales Order Release":
+                case "Sales Order & Payment Request":
                   notification.icon = mdiAccountCreditCardOutline;
                   break; 
-                  case "Accepted":
+                  case "PO Accepted":
                     notification.icon = mdiCheckDecagramOutline;
                     break;   
             default:
               notification.icon = mdiBellBadgeOutline;
               break;
           }
-        });
+        }); 
+        if(notifications != data.data.value) 
         setNotifications(data.data.value);
       } catch (error) {
         console.error("Failed to fetch notifications:", error);
       }
       setnotificationsLoader(false);
     };
+    const fetchPurchaseRequests = async () =>{
+      try {
+      setPurchaseRequestsLoader(true);
+      let prdata = await getPurchaseRequestsByCustomerId(userInfo.customerId,15);
+      prdata.data.value.forEach((PR)=>{
+        PR.purchaseEnquiryId += " - "
+      })
+        setPurchaseRequests(prdata.data.value);
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+      }
+      setPurchaseRequestsLoader(false)
+    };
+    const fetchPurchaseOrders = async () =>{
+      try {
+      setPurchaseOrdersLoader(true);
+      let podata = await getPurchaseOrdersByCustomerId(userInfo.customerId,15);
+      podata.data.value.forEach((PO)=>{
+        PO.purchaseOrderId += " - "
+      })
+        setPurchaseOrders(podata.data.value);
+      } catch (error) {
+        console.error("Failed to fetch PurchaseOrders:", error);
+      }
+      setPurchaseOrdersLoader(false);
+      
+      
+    };
+    const fetchUserDocs = async ()=>{
+      try {
+        const userDocs = await getUserFileByCustomerId(userInfo.customerId);
+        console.log(userDocs);
+            setDocUrls({bankMandate:userDocs.bankMandate? URL.createObjectURL(userDocs.bankMandate):null,
+              gstCertificate:userDocs.gstCertificate?URL.createObjectURL(userDocs.gstCertificate):null,
+               panCard:userDocs.panCard?URL.createObjectURL(userDocs.panCard):null,
+               profilePic:userDocs.profilePic?URL.createObjectURL(userDocs.profilePic):null});
+               userDocs.bankMandate = userDocs.bankMandate? true : false;
+               userDocs.gstCertificate = userDocs.gstCertificate? true : false;
+               userDocs.panCard = userDocs.panCard? true : false;
+               setUploads(userDocs);
+               setUploadSectionLoader(false);
+      } catch (error) {
+        console.error("Failed to fetch User Documents:", error);
+      }
+    }
 
     fetchNotifications();
+    setInterval(() => {
+      fetchNotifications();
+    }, 10000);
+    fetchPurchaseRequests();
+    fetchPurchaseOrders();
+    fetchUserDocs();
   }, [userInfo]);
-  const [uploads, setUploads] = useState({
-    upload1: false,
-    upload2: false,
-    upload3: false,
-  });
+  const refreshNotifications = async ()=>{
+    try {
+      // setnotificationsLoader(true);
+      const data = await getNotificationsByCustomerId(userInfo.customerId,30);
+      data.data.value.forEach((notification) => {
+        switch (notification.commentsText.substring(11)) {
+          case "Negotiated Quotation":
+            notification.icon = mdiTextBoxEditOutline;
+            break;
+          case "Payment Reminder":
+            notification.icon = mdiCashClock;
+            break;
+          case "Out for Delivery":
+            notification.icon = mdiTruckDeliveryOutline;
+            break;
+          case "Payment Confirmed":
+            notification.icon = mdiCashCheck;
+            break;
+            case "Quotation Received":
+              notification.icon = mdiTextBoxCheckOutline;
+              break; 
+              case "Sales Order & Payment Request":
+                notification.icon = mdiAccountCreditCardOutline;
+                break; 
+                case "PO Accepted":
+                  notification.icon = mdiCheckDecagramOutline;
+                  break;   
+          default:
+            notification.icon = mdiBellBadgeOutline;
+            break;
+        }
+      }); 
+      if(notifications != data.data.value) 
+      setNotifications(data.data.value);
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    }
+  };
+  const handleDrop = async (event) => {
+        
+    
+    
+    let file;
+    if(event.target && event.target.files)
+      file = event.target.files[0];
+    else alert('Oops! You haven’t selected any files. Please choose at least one file to upload.');
+
+    const reader = new FileReader();
+        reader.onload = async function (e) {
+          setUploadSectionLoader(true);
+            const arrayBuffer = e.target.result;
+            const key = event.target.getAttribute('data-key');
+             let res = await uploadUserFile(key,arrayBuffer,file.type,userInfo.customerId);
+             setUploads((prev) => ({ ...prev, [key]: true }));
+             try {
+              const userDocs = await getUserFileByCustomerId(userInfo.customerId);
+              console.log(userDocs);
+                  setDocUrls({bankMandate:userDocs.bankMandate? URL.createObjectURL(userDocs.bankMandate):null,
+                    gstCertificate:userDocs.gstCertificate?URL.createObjectURL(userDocs.gstCertificate):null,
+                     panCard:userDocs.panCard?URL.createObjectURL(userDocs.panCard):null});
+                     userDocs.bankMandate = userDocs.bankMandate? true : false;
+                     userDocs.gstCertificate = userDocs.gstCertificate? true : false;
+                     userDocs.panCard = userDocs.panCard? true : false;
+                     setUploads(userDocs);
+                     setUploadSectionLoader(false);
+            } catch (error) {
+              console.error("Failed to fetch User Documents:", error);
+            }
+          }
+            reader.readAsArrayBuffer(file);
+          
+            
+          
+          
+          
+    // await $.ajax({
+    //   url:'https://dde7cfc6trial-dev-mahindra-sales-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/Files',
+    //   method : "POST",
+    //   timeout:0,
+    //   data:JSON.stringify(file),
+    //   contentType:"application/json",
+    //   success:async function (params) {
+    //     console.log(params);
+    //     const reader = new FileReader();
+    //     reader.onload = async function (e) {
+    //         const arrayBuffer = e.target.result; // File data in ArrayBuffer format
+
+    //        await $.ajax({
+    //             url: `https://dde7cfc6trial-dev-mahindra-sales-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/Files(ID=${params.ID},IsActiveEntity=true)/content`,
+    //             method: 'PUT',
+    //             data: arrayBuffer,
+    //             processData: false, // Do not process the data
+    //             contentType: newFiles[index].fileObj.type, // Set content type to file's MIME type
+    //             success: function () {
+    //                 // alert('File uploaded successfully!');
+    //             },
+    //             error: function (err) {
+    //                 console.error('Error uploading file:', err);
+    //                 // alert('File upload failed.');
+    //             }
+    //         });
+    //     };
+    //     reader.readAsArrayBuffer(newFiles[index].fileObj);
+    //   },
+    //   error:function (params) {
+    //     console.log(params);
+    //   }
+    // });  
+    
+  };
   const handleUpload = (uploadKey) => {
     // Simulate file upload
-    setUploads((prev) => ({ ...prev, [uploadKey]: true }));
+    
+    document.getElementById(uploadKey).click();
+    // setUploads((prev) => ({ ...prev, [uploadKey]: true }));
   };
-  const handleRemove = (uploadKey) => {
+  const handleRemove =async (uploadKey) => {
     // Reset the upload status
+    let res =await deleteUserFileByCustomerId(userInfo.customerId,uploadKey);
     setUploads((prev) => ({ ...prev, [uploadKey]: false }));
   };
   const navigate = useNavigate();
-  const goToUserProfile = () => {
-    navigate("/Profile");
+  const goToUserProfile = (cId) => {
+    if(cId)
+    navigate(`/Profile/${cId}`);
   };
   const goToInquiry = () => {
     navigate("/Inquiry");
@@ -165,7 +332,7 @@ const Dashboard = () => {
             {/* User Info */}
             <div className={"UserInfoSDiv"}>
               <section
-                onClick={goToUserProfile}
+                onClick={()=>goToUserProfile(userInfo.customerId)}
                 id="UserInfoS"
                 className={"UserInfoS"}
               >
@@ -185,7 +352,7 @@ const Dashboard = () => {
                   </div>
                 ) : (
                   <div className="UserInfoSA">
-                    <img className="profilepic" src={propic}></img>
+                    <img className="profilepic" src={docUrls.profilePic?docUrls.profilePic:emptyProfilePic}></img>
 
                     <text className="profileName">{userInfo.name}</text>
                     <h4
@@ -370,86 +537,20 @@ const Dashboard = () => {
                     ></SpinnerCircularSplit>
                   ) : (
                     <ul>
-                      <li>
+                      {/* <li>
                         <Icon path={mdiCheckCircle} size={1} color="green" />
                         <span style={{ marginLeft: "5px", color: "lightcyan" }}>
                           Request #2001 - Completed
                         </span>
-                      </li>
-                      <li>
-                        <Icon
-                          path={mdiProgressClock}
-                          size={1}
-                          color="orangered"
-                        />
-                        <span style={{ marginLeft: "5px", color: "lightcyan" }}>
-                          Request #2002 - In Review
-                        </span>
-                      </li>
-                      <li>
+                      </li> */}
+                      {purchaseRequests.map((purchaseRequest)=>(
+                        <li>
                         <Icon path={mdiCheckCircle} size={1} color="green" />
                         <span style={{ marginLeft: "5px", color: "lightcyan" }}>
-                          Request #2003 - Completed
+                          {purchaseRequest.purchaseEnquiryId}
                         </span>
                       </li>
-                      <li>
-                        <Icon
-                          path={mdiProgressClock}
-                          size={1}
-                          color="orangered"
-                        />
-                        <span style={{ marginLeft: "5px", color: "lightcyan" }}>
-                          Request #2004 - In Review
-                        </span>
-                      </li>
-                      <li>
-                        <Icon path={mdiCheckCircle} size={1} color="green" />
-                        <span style={{ marginLeft: "5px", color: "lightcyan" }}>
-                          Request #2005 - Completed
-                        </span>
-                      </li>
-                      <li>
-                        <Icon
-                          path={mdiProgressClock}
-                          size={1}
-                          color="orangered"
-                        />
-                        <span style={{ marginLeft: "5px", color: "lightcyan" }}>
-                          Request #2006 - In Review
-                        </span>
-                      </li>
-                      <li>
-                        <Icon path={mdiCheckCircle} size={1} color="green" />
-                        <span style={{ marginLeft: "5px", color: "lightcyan" }}>
-                          Request #2007 - Completed
-                        </span>
-                      </li>
-                      <li>
-                        <Icon
-                          path={mdiProgressClock}
-                          size={1}
-                          color="orangered"
-                        />
-                        <span style={{ marginLeft: "5px", color: "lightcyan" }}>
-                          Request #2008 - In Review
-                        </span>
-                      </li>
-                      <li>
-                        <Icon path={mdiCheckCircle} size={1} color="green" />
-                        <span style={{ marginLeft: "5px", color: "lightcyan" }}>
-                          Request #2009 - Completed
-                        </span>
-                      </li>
-                      <li>
-                        <Icon
-                          path={mdiProgressClock}
-                          size={1}
-                          color="orangered"
-                        />
-                        <span style={{ marginLeft: "5px", color: "lightcyan" }}>
-                          Request #2010 - In Review
-                        </span>
-                      </li>
+                      ))}
                     </ul>
                   )}
                 </div>
@@ -478,28 +579,20 @@ const Dashboard = () => {
                     ></SpinnerCircularSplit>
                   ) : (
                     <ul>
-                      <li>
+                      {/* <li>
                         <Icon path={mdiCheckCircle} size={1} color="green" />
                         <span style={{ marginLeft: "5px", color: "lightcyan" }}>
                           Order #1001 - Delivered
                         </span>
-                      </li>
-                      <li>
-                        <Icon
-                          path={mdiProgressClock}
-                          size={1}
-                          color="orangered"
-                        />
-                        <span style={{ marginLeft: "5px", color: "lightcyan" }}>
-                          Order #1002 - Pending
-                        </span>
-                      </li>
-                      <li>
-                        <Icon path={mdiCheckCircle} size={1} color="green" />
-                        <span style={{ marginLeft: "5px", color: "lightcyan" }}>
-                          Order #1003 - Delivered
-                        </span>
-                      </li>
+                      </li> */}
+                     {purchaseOrders.map((PO)=>(
+                       <li>
+                       <Icon path={mdiCheckCircle} size={1} color="green" />
+                       <span style={{ marginLeft: "5px", color: "lightcyan" }}>
+                         {PO.purchaseOrderId}
+                       </span>
+                     </li>
+                     ))}
                     </ul>
                   )}
                 </div>
@@ -531,6 +624,7 @@ const Dashboard = () => {
                     </span>
                   </div>
                   <button
+                    onClick={()=>refreshNotifications()}
                     className="button"
                     style={{
                       marginTop: "-20px",
@@ -543,7 +637,7 @@ const Dashboard = () => {
                     }}
                   >
                     <span style={{ display: "flex", alignItems: "center" }}>
-                      <Icon path={mdiMessageText} size={1} color="white" />
+                      <Icon path={mdiUpdate} size={1} color="white" />
                       <span
                         style={{
                           fontFamily: "sans-serif",
@@ -552,7 +646,7 @@ const Dashboard = () => {
                           fontPalette: "normal",
                         }}
                       >
-                        MESSAGES
+                        UPDATE
                       </span>
                     </span>
                   </button>
@@ -894,9 +988,10 @@ const Dashboard = () => {
                         { name: "Bank Mandate", key: "bankMandate" },
                       ].map((doc, index) => (
                         <li key={doc.key}>
-                          <span>{doc.name}</span>
+                          
                           {uploads[doc.key] ? (
                             <>
+                            <a href={docUrls[doc.key]}>{doc.name}</a>
                               <Icon
                                 path={mdiCheckCircle}
                                 size={1}
@@ -932,6 +1027,17 @@ const Dashboard = () => {
                             </>
                           ) : (
                             <>
+                            <span>{doc.name}</span>
+                            {/* <input id={doc.key} type="file" hidden onChange={
+                              (event) => handleDrop(event)} 
+                              /> */}
+                              <input 
+  id={doc.key} 
+  data-key={doc.key}
+  type="file" 
+  hidden 
+  onChange={(event) => handleDrop(event)}  
+/>
                               <Icon
                                 path={mdiProgressClock}
                                 size={1}
