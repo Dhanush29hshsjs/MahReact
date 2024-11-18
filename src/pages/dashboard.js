@@ -25,6 +25,14 @@ import {
   mdiTextBoxEditOutline,
   mdiBellBadgeOutline,
   mdiUpdate,
+  mdiSync,
+  mdiFileChartCheckOutline,
+  mdiFileDocumentEditOutline,
+  mdiCancel,
+  mdiInvoiceCheckOutline,
+  mdiInvoiceArrowRightOutline,
+  mdiInvoiceArrowLeftOutline,
+  mdiReceiptTextCheckOutline,
 } from "@mdi/js";
 import Icon from "@mdi/react";
 import emptyProfilePic from "../emptyProfilePic.webp";
@@ -46,6 +54,7 @@ const Dashboard = () => {
   const email = "Pradeep@gmail.com";
   const password = "11111";
   sessionStorage.setItem('pass', password);
+  
 
   const [userInfo, setUserInfo] = useState({});
   const [notifications, setNotifications] = useState([]);
@@ -63,6 +72,7 @@ const Dashboard = () => {
       try {
         const data = await getUserByLoginCred(email, password); // Assumes getUserByLoginCred is an async function
         if (data.length == 1) setUserInfo(data[0]);
+        sessionStorage.setItem('cId', data[0].customerId);
         // alert(userInfo.name)
       } catch (error) {
         console.error("Failed to fetch user info:", error);
@@ -118,7 +128,18 @@ const Dashboard = () => {
       setPurchaseRequestsLoader(true);
       let prdata = await getPurchaseRequestsByCustomerId(userInfo.customerId,15);
       prdata.data.value.forEach((PR)=>{
-        PR.purchaseEnquiryId += " - "
+        if(PR.status == 'Draft'){
+       PR.purchaseEnquiryId += " - Draft"
+       PR.Icon = mdiFileDocumentEditOutline
+        }
+      else if(PR.status == 'In Process'){
+        PR.purchaseEnquiryId += " - Quotation"
+        PR.Icon = mdiFileChartCheckOutline 
+      }
+      else{
+      PR.purchaseEnquiryId += " - In Process"        
+      PR.Icon = mdiSync
+    }
       })
         setPurchaseRequests(prdata.data.value);
       } catch (error) {
@@ -131,7 +152,20 @@ const Dashboard = () => {
       setPurchaseOrdersLoader(true);
       let podata = await getPurchaseOrdersByCustomerId(userInfo.customerId,15);
       podata.data.value.forEach((PO)=>{
-        PO.purchaseOrderId += " - "
+        if(PO.status == 'Rejected'){
+PO.purchaseOrderId += " - Order Rejected";
+PO.Icon = mdiCancel;
+        }else if(PO.status == 'Payment Confirmed'){
+          PO.purchaseOrderId += " - Invoice";
+          PO.Icon = mdiReceiptTextCheckOutline;
+        }else if(PO.status == 'Approved'||PO.status == 'SO Pending'||PO.status == 'SO Not Released'||PO.status == 'Sent For Release'){
+          PO.purchaseOrderId += " - Purchase Order";
+          PO.Icon = mdiInvoiceArrowRightOutline;
+        }else{
+          PO.purchaseOrderId += " - Sales Order";
+          PO.Icon = mdiInvoiceArrowLeftOutline;
+        }
+        
       })
         setPurchaseOrders(podata.data.value);
       } catch (error) {
@@ -545,10 +579,11 @@ const Dashboard = () => {
                       </li> */}
                       {purchaseRequests.map((purchaseRequest)=>(
                         <li>
-                        <Icon path={mdiCheckCircle} size={1} color="green" />
+                       
                         <span style={{ marginLeft: "5px", color: "lightcyan" }}>
                           {purchaseRequest.purchaseEnquiryId}
                         </span>
+                        <Icon path={purchaseRequest.Icon} size={1} style={{paddingLeft:'10px'}} color="#ede8ff" />
                       </li>
                       ))}
                     </ul>
@@ -587,10 +622,11 @@ const Dashboard = () => {
                       </li> */}
                      {purchaseOrders.map((PO)=>(
                        <li>
-                       <Icon path={mdiCheckCircle} size={1} color="green" />
+
                        <span style={{ marginLeft: "5px", color: "lightcyan" }}>
                          {PO.purchaseOrderId}
                        </span>
+                       <Icon path={PO.Icon} size={1} style={{paddingLeft:'10px'}} color="#ede8ff" />
                      </li>
                      ))}
                     </ul>

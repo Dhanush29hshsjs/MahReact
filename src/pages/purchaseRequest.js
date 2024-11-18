@@ -1,5 +1,5 @@
 // // Orders.js
-import { AppBar, IconButton, MenuItem, Paper, Select, Tab, Table, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField } from "@material-ui/core";
+import { AppBar, Hidden, IconButton, MenuItem, Paper, Select, Tab, Table, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField } from "@material-ui/core";
 import {
   mdiListBoxOutline,
   mdiFile,
@@ -31,6 +31,8 @@ import mahLogo from "../mahindra-logo-new.webp";
 import { DataGrid, renderEditInputCell, renderEditSingleSelectCell } from "@material-ui/data-grid";
 import { VerticalTimeline, VerticalTimelineElement } from "react-vertical-timeline-component";
 import { useNavigate } from "react-router-dom";
+import { getPurchaseRequestsByCustomerId } from "../api";
+import { SpinnerCircularSplit } from "spinners-react";
 
 // import { color } from "@mui/system";
    
@@ -161,14 +163,43 @@ const Orders = () => {
       </Select>
     );
   };
+  const InProcAndQuotecolumns = [
+    { field: "id", headerName: "ID", width: 150 },
+    { field: "purchaseEnquiryUuid",hide:true},
+    { minWidth: 250, field: "purchaseEnquiryId", headerName: "Purchase Inquiry", flex: 1 },
+    { minWidth: 250, field: "docType", headerName: "Document Type", flex: 1, editable: true, renderEditCell: (params) => <EditDropdownCell {...params} /> },
+    { minWidth: 250, field: "salesOrg", headerName: "Sales Organisation", flex: 1, editable: true },
+    { minWidth: 250, field: "distributionChannels", headerName: "Distribution Channels", flex: 1 },
+    { minWidth: 200, field: "division", headerName: "division", flex: 1 },
+    { minWidth: 200, field: "createdAt", headerName: "createdAt", flex: 1 },
+    {
+      headerName:' ',
+      disableColumnMenu: true,
+      field: "Actions",
+      width: 100,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <IconButton
+        style={{ position: 'sticky', left: 0, background: 'white', zIndex: 1 }}
+          className="stickyCell"
+          onClick={() =>{
+            navtoObjPage(params.row.purchaseEnquiryUuid)}}
+          color="primary"
+          aria-label="show row id"
+        >
+          <Icon path={mdiChevronRight} size={1} />
+        </IconButton>
+      ),
+    },
+  ];
   const columns = [
-    { field: "ID", headerName: "ID", width: 150 },
-    { minWidth: 200, field: "DocType", headerName: "DocType", flex: 1, editable: true, renderEditCell: (params) => <EditDropdownCell {...params} /> },
-    { minWidth: 200, field: "OrderType", headerName: "OrderType", flex: 1, editable: true },
-    { minWidth: 200, field: "Customer", headerName: "Customer", flex: 1 },
-    { minWidth: 150, field: "Status", headerName: "Status", flex: 1 },
-    { minWidth: 150, field: "Priority", headerName: "Priority", flex: 1 },
-    { minWidth: 150, field: "Date", headerName: "Date", flex: 1 },
+    { field: "id", headerName: "ID", width: 150 },
+    { minWidth: 250, field: "docType", headerName: "Document Type", flex: 1, editable: true, renderEditCell: (params) => <EditDropdownCell {...params} /> },
+    { minWidth: 250, field: "salesOrg", headerName: "Sales Organisation", flex: 1, editable: true },
+    { minWidth: 250, field: "distributionChannels", headerName: "Distribution Channels", flex: 1 },
+    { minWidth: 200, field: "division", headerName: "division", flex: 1 },
+    { minWidth: 200, field: "createdAt", headerName: "createdAt", flex: 1 },
     {
       headerName:' ',
       disableColumnMenu: true,
@@ -195,13 +226,62 @@ const Orders = () => {
     { label: "Order", value: "Order" },
     { label: "Return", value: "Return" },
   ];
-  const rows = [
-    { id: 1, ID: 'QTN-001', DocType: 'Quotation', OrderType: 'Standard', Customer: 'ABC Corp', Status: 'Open', Priority: 'High', Date: '2024-10-01' },
-    { id: 2, ID: 'QTN-002', DocType: 'Inquiry', OrderType: 'Express', Customer: 'XYZ Inc', Status: 'Closed', Priority: 'Low', Date: '2024-10-02' },
-    { id: 3, ID: 'QTN-003', DocType: 'Quotation', OrderType: 'Bulk Order', Customer: 'LMN Ltd', Status: 'Draft Requests', Priority: 'Medium', Date: '2024-10-03' },
-    { id: 4, ID: 'QTN-004', DocType: 'Inquiry', OrderType: 'Standard', Customer: 'DEF Enterprises', Status: 'Draft Requests', Priority: 'High', Date: '2024-10-04' },
-    { id: 5, ID: 'QTN-005', DocType: 'Quotation', OrderType: 'Custom', Customer: 'GHI Co', Status: 'Draft Requests', Priority: 'Low', Date: '2024-10-05' },
-  ];
+  const [rows,setRows] = useState([]);
+  const [inProcessRows,setInProcessRows] = useState([]);
+  const [quotationsRows,setQuotationsRows] = useState([]);
+  const [rowsLoader,setRowsLoader] = useState(true);
+  const [inProcessRowsLoader,setInProcessRowsLoader] = useState(true);
+  const [quotationsRowsLoader,setQuotationsRowsLoader] = useState(true);
+  useEffect(()=>{
+    const fetchPurchaseRequests = async () =>{
+      try {
+        let res = await getPurchaseRequestsByCustomerId(sessionStorage.getItem('cId'),0);
+        console.log(res.data.value);
+        let rowsArr =[];
+        let inProcessRowsArr =[];
+        let quotationsRowsArr =[];
+        res.data.value.forEach(async (row,index) => {
+          let newRow={};
+          newRow.id = index+1;
+          newRow.docType = row.docType || null;
+          newRow.purchaseEnquiryUuid = row.purchaseEnquiryUuid || null;
+          newRow.status = row.status || null;
+          newRow.purchaseEnquiryId = row.purchaseEnquiryId || null;
+          newRow.salesOrg = row.salesOrg || null;
+          newRow.distributionChannels = row.distributionChannels || null;
+          newRow.division = row.division || null;
+          newRow.createdAt = row.createdAt || null;
+          if(row.status == 'Draft')
+          rowsArr.push(newRow);
+        else if(row.status == 'In Process')
+          quotationsRowsArr.push(newRow);
+        else
+        inProcessRowsArr.push(newRow);
+        });
+        setRows(rowsArr);
+        setInProcessRows(inProcessRowsArr);
+        setQuotationsRows(quotationsRowsArr);
+        setRowsLoader(false);
+        setInProcessRowsLoader(false);
+        setQuotationsRowsLoader(false);
+        console.log(rowsArr);
+      } catch (error) {
+        console.error("Failed to fetch Purchase Requests:", error);
+      }
+      setRowsLoader(false);
+      setInProcessRowsLoader(false);
+        setQuotationsRowsLoader(false);
+    }
+fetchPurchaseRequests();
+  },[])
+  //doctype,salesorg,distributionchnl,diision,createdat
+  // const rows = [
+  //   { id: 1, ID: 'QTN-001', DocType: 'Quotation', OrderType: 'Standard', Customer: 'ABC Corp', Status: 'Open', Priority: 'High', Date: '2024-10-01' },
+  //   { id: 2, ID: 'QTN-002', DocType: 'Inquiry', OrderType: 'Express', Customer: 'XYZ Inc', Status: 'Closed', Priority: 'Low', Date: '2024-10-02' },
+  //   { id: 3, ID: 'QTN-003', DocType: 'Quotation', OrderType: 'Bulk Order', Customer: 'LMN Ltd', Status: 'Draft Requests', Priority: 'Medium', Date: '2024-10-03' },
+  //   { id: 4, ID: 'QTN-004', DocType: 'Inquiry', OrderType: 'Standard', Customer: 'DEF Enterprises', Status: 'Draft Requests', Priority: 'High', Date: '2024-10-04' },
+  //   { id: 5, ID: 'QTN-005', DocType: 'Quotation', OrderType: 'Custom', Customer: 'GHI Co', Status: 'Draft Requests', Priority: 'Low', Date: '2024-10-05' },
+  // ];
   
   const Item = {
     DocType: "Sales Order",
@@ -252,7 +332,10 @@ console.log(newRow);
   }
 
   return (
-    <div >
+    <div style={{display: 'flex',
+      flexDirection: 'column',
+      minHeight: '100vh',
+      margin: '0'}}>
       <div
         style={{
           background: "rgb(211 197 255)",
@@ -379,7 +462,7 @@ console.log(newRow);
                 }}
               >
                 <Icon
-                  path={mdiSync}
+                  path={mdiFileDocumentEditOutline}
                   size={1.5}
                 />
               </section>
@@ -387,9 +470,14 @@ console.log(newRow);
     marginBottom: '5px',
     fontSize: 'x-large',
     fontFamily: 'auto',
-    color: '#6d6d6d'}}>Requests Awaiting Quotation</span>
+    color: '#6d6d6d'}}>Draft Requests.</span>
             </div>
-                <div style={{ padding: '30px',  minHeight: '100px'}}>
+            {rowsLoader?(
+              <SpinnerCircularSplit
+              style={{ margin: "auto",padding: '30px',  minHeight: '350px' }}
+              color="rgb(229 193 0)"
+            ></SpinnerCircularSplit>
+            ):(<div style={{ padding: '30px',  minHeight: '350px'}}>
                 {/* <table>
                   <thead>
                     <tr>
@@ -411,12 +499,12 @@ console.log(newRow);
            rows={rows}
            columns={columns}
            initialState={{ pinnedColumns: { left: ['Actions'] } }}
-           
+           pageSize={30}
            style={{ maxHeight: '550px', width: '100%',overflowY:'scroll',scrollbarWidth: 'thin',
             scrollbarColor: '#e5c100 #d6d6d6' }}
                   autoHeight
-           checkboxSelection
-           disableSelectionOnClick
+          //  checkboxSelection
+          //  disableSelectionOnClick
            pinnedColumns={{"right":["Actions"]}}
           //  onRowClick={}
           //  onRowClick={handleRowClick}
@@ -439,7 +527,8 @@ console.log(newRow);
     </Paper>
 
 
-                </div>
+                </div>)}
+                
           </div>
           
         </section>
@@ -481,9 +570,14 @@ console.log(newRow);
     marginBottom: '5px',
     fontSize: 'x-large',
     fontFamily: 'auto',
-    color: '#6d6d6d'}}>Requests Awaiting Quotation</span>
+    color: '#6d6d6d'}}>In Process</span>
             </div>
-                <div style={{ padding: '30px',  minHeight: '100px'}}>
+            {inProcessRowsLoader?(
+               <SpinnerCircularSplit
+               style={{ margin: "auto",padding: '30px',  minHeight: '350px' }}
+               color="rgb(229 193 0)"
+             ></SpinnerCircularSplit>
+            ):(<div style={{ padding: '30px',  minHeight: '350px'}}>
                 {/* <table>
                   <thead>
                     <tr>
@@ -502,13 +596,103 @@ console.log(newRow);
                 </table> */}
   <Paper sx={{ height: '400px', width: '100%' }}>
     <DataGrid
-           rows={rows}
-           columns={columns}
+           rows={inProcessRows}
+           columns={InProcAndQuotecolumns}
            style={{ maxHeight: '550px', width: '100%',overflowY:'scroll',scrollbarWidth: 'thin',
             scrollbarColor: '#e5c100 #d6d6d6' }}
                   autoHeight
-           checkboxSelection
-           disableSelectionOnClick
+          //  checkboxSelection
+          //  disableSelectionOnClick
+          onCellEditCommit={handleCellEditCommit}
+     >
+      
+    </DataGrid>
+    {/* <DataGrid></DataGrid> */}
+      {/* <DataGrid
+        rows={rows}
+        columns={columns}
+        initialState={{ pagination: { paginationModel } }}
+        pageSizeOptions={[5, 10]}
+        checkboxSelection
+        sx={{ border: 0 }}
+      /> */}
+    </Paper>
+
+
+                </div>)}
+                
+          </div>
+          
+        </section>
+      </div>)}
+
+      {tabHidden == "2" && (<div id="thirdTab" >
+        <section  style={{ marginTop: "10vh", marginLeft: "15vh", marginRight: "15vh" }}>
+        <div className="prSection"
+            style={{
+              // boxShadow: 'rgb(31, 31, 31) 0px 0px 15px',
+              borderRadius: '20px',
+              backgroundColor: 'aliceblue',
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+             <div style={{display:'flex',flexDirection:'row'}}>
+              <section
+                style={{
+                  boxShadow: '0 0px 15px rgb(0 0 0 / 76%)',
+                  borderRadius: '10px',
+                  backgroundColor: "#e5c100",
+                  width: "90px",
+                  height: "90px",
+                  textAlign: 'center',
+                  alignContent: "center",
+                  marginLeft: "80p",
+                  marginTop: "-30px",
+                  marginLeft: "50px",
+                }}
+              >
+                <Icon
+                  path={mdiFileChartCheckOutline}
+                  size={1.5}
+                />
+              </section>
+              <span style={{    marginTop: 'auto',    marginLeft: '50px',
+    marginBottom: '5px',
+    fontSize: 'x-large',
+    fontFamily: 'auto',
+    color: '#6d6d6d'}}>Quotations / Negotiations</span>
+            </div>
+            {quotationsRowsLoader?( <SpinnerCircularSplit
+              style={{ margin: "auto",padding: '30px',  minHeight: '350px' }}
+              color="rgb(229 193 0)"
+            ></SpinnerCircularSplit>):(
+              <div style={{ padding: '30px',  minHeight: '350px'}}>
+                {/* <table>
+                  <thead>
+                    <tr>
+                      <th>Select</th>
+                      <th>Item</th>
+                      <th>Quantity</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><input type="checkbox" value='false' ></input></td>
+                      <td></td>
+                      <td><input type="number" min={1} ></input></td>
+                    </tr>
+                  </tbody>
+                </table> */}
+  <Paper sx={{ height: '400px', width: '100%' }}>
+    <DataGrid
+           rows={quotationsRows}
+           columns={InProcAndQuotecolumns}
+           style={{ maxHeight: '550px', width: '100%',overflowY:'scroll',scrollbarWidth: 'thin',
+            scrollbarColor: '#e5c100 #d6d6d6' }}
+                  autoHeight
+          //  checkboxSelection
+          //  disableSelectionOnClick
           onCellEditCommit={handleCellEditCommit}
      >
       
@@ -526,17 +710,14 @@ console.log(newRow);
 
 
                 </div>
+            )}
+                
           </div>
           
         </section>
       </div>)}
-
-      {tabHidden == "2" && (<div id="thirdTab" >
-        {" "}
-        <h1>thirdtab</h1>
-      </div>)}
       
-      <footer style={{display: 'flex',
+      {/* <footer style={{display: 'flex',
     flexDirection: 'row', backgroundColor: '#030e22' ,    marginTop: '40px',
     padding: '40px',    alignItems: 'end',
     justifyContent: 'space-between'}}>
@@ -545,7 +726,36 @@ console.log(newRow);
     color: '#c5c5c5'}}></var>
         <span style={{color:'white'}}>Copyright© 2024 Mahindra&Mahindra Ltd. All Rights Reserved.</span></div>
         
-    </footer>
+    </footer> */}
+    <footer style={{
+        // position: 'fixed',
+        // bottom: '0',
+        // left: '0',
+        // zIndex:'-1',
+        // width:'100%',
+
+  display: 'flex',
+  flexDirection: 'row',
+  backgroundColor: '#030e22',
+  marginTop: '40px',
+  padding: '20px 40px',  // Adjusted padding for a more balanced layout
+  alignItems: 'center',  // Centered items vertically
+  justifyContent: 'space-between'
+}}>
+  <img style={{ marginLeft: '20px', maxHeight: '50px' }} src={mahLogo} alt="Mahindra Logo" />
+  
+  <div style={{ display: 'flex', alignItems: 'center' }}>
+    <div style={{
+      border: '1px solid #c5c5c5', // Border color adjusted to match text color
+      height: '20px', // Height added to make the border visible
+      marginRight: '20px'
+    }}></div>
+    <span style={{ color: 'white' }}>
+      Copyright © 2024 Mahindra & Mahindra Ltd. All Rights Reserved.
+    </span>
+  </div>
+</footer>
+
     </div>
   );
 };

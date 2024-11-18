@@ -35,12 +35,27 @@ export const getUserById = async(id)=>{
 export const getPurchaseRequestsByCustomerId = async (customerId,top)=>{
   var url;
 if (top == 0)
- url =`PurchaseEnquiry?$filter=customerId eq ${customerId}`;
+ url =`PurchaseEnquiry?$filter=customerId eq ${customerId}&$orderby=createdAt desc`;
 else
   url =`PurchaseEnquiry?$filter=customerId eq ${customerId}&$orderby=createdAt desc&$top=${top}`
 const data = await instance.get(url);
 return data.value || data;
 };
+export const getPurchaseRequestsByUUID = async (UUID)=>{
+let url =`PurchaseEnquiry?$filter=purchaseEnquiryUuid eq ${UUID} and IsActiveEntity eq true`;
+const data = await instance.get(url);
+return data.value || data;
+};
+export const getVehiclesInventory = async ()=>{
+  let url =`VehicleInventory`;
+  const data = await instance.get(url);
+  return data.value || data;
+  };
+  export const getRequestVehiclesByPurchaseEnquiryUuid = async (purchaseEnquiryUuid)=>{
+    let url =`EnquiryVehicle?$filter=purchaseEnquiryUuid eq ${purchaseEnquiryUuid}`;
+    const data = await instance.get(url);
+    return data.value || data;
+    };
 export const getPurchaseOrdersByCustomerId = async (customerId,top)=>{
   var url;
 if (top == 0)
@@ -94,6 +109,44 @@ export const uploadUserFile = async (field,file,filetype, id) => {
   }
 
   
+};
+export const getFilesByPurchaseId = async (purchaseEnquiryUuid) => {
+  
+  const url = `EnquiryFiles?$filter=purchaseEnquiryUuid eq ${purchaseEnquiryUuid}`;
+  const data = await instance.get(url);
+  
+ return  data.value || data;;
+};
+export const getFilesByUrl = async (fileUrl) => {
+  
+  const url = fileUrl;
+  const data = await instance.get(url,{ responseType: 'blob', headers: {
+    'Content-Type': 'application/json'
+} });
+  
+  
+ return  data.data || data;;
+};
+export const deleteFiles = async (files) => {
+for (let index = 0; index < files.length; index++) {
+  const url = `EnquiryFiles/${files[index].oId}` ;
+  let res = await instance.delete(url);
+}
+};
+export const postFilesPurchaseReq = async (body,file) => {
+  
+  const url = 'EnquiryFiles';
+  const postingFileData = await instance.post(url,body);
+
+  const data = await instance.put(url+`/${postingFileData.data.id}/content`, file, {
+    headers: {
+      'Content-Type': body.mediaType, // Set content type to file's MIME type
+    },
+    processData: false, // Do not process the data
+  });
+  
+  
+ return  data.data || data;;
 };
 export const getUserFileByCustomerId = async (id) => {
   
@@ -188,6 +241,16 @@ export const updateProfileData = async (id,body) => {
       console.log(response);
     } catch (error) {
       console.error("Error updating profile Data :", error);
+    }   
+};
+export const updatePassword = async (id,password) => {
+  const url = `Customer/${id}`;
+    try {
+      let body={password:password}
+      const response = await instance.patch(url,body);
+      console.log(response);
+    } catch (error) {
+      console.error("Error updating Password :", error);
     }   
 };
 // export const getTableCount = async () => {

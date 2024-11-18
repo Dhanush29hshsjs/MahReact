@@ -19,12 +19,14 @@ import {
   mdiLockRemoveOutline,
   mdiLockOpenCheckOutline,
   mdiLockOpenVariantOutline,
+  mdiCheck,
+  mdiClose,
 } from "@mdi/js";
 import resetPasswordImg from "../resetPasswordImage.png";
 import mahLogo from "../mahindra-logo-new.webp";
 import { width } from "@fortawesome/free-solid-svg-icons/fa0";
 import { useParams } from "react-router-dom";
-import { getDelProfilePic, getUserById, updateProfileData, uploadProfilePic } from "../api";
+import { getDelProfilePic, getUserById, updatePassword, updateProfileData, uploadProfilePic } from "../api";
 import { SpinnerCircularSplit } from "spinners-react";
 
 var initialProfileData={};
@@ -36,7 +38,6 @@ const UserProfile = () => {
   const [profilePicUrl,setProfilePicUrl] = useState("")
   const [profileDataLoader, setProfileDataLoader] = useState(true);
   const [resetPass,setResetPass]=useState({
-    currentPassword:sessionStorage.getItem('pass'),
     oldPassword:"",
     newPassword:"",
     confirmNewPassword:""
@@ -99,6 +100,15 @@ setProfileData(initialProfileData);
     initialProfileData = profileData;
     console.log(res);
   }
+  const updatePass = async()=>{
+    if((sessionStorage.getItem('pass') === resetPass.oldPassword) && (resetPass.newPassword == resetPass.confirmNewPassword)&&(resetPass.newPassword != '')){
+      let res = await updatePassword(cId,resetPass.newPassword);
+      console.log(res);
+      sessionStorage.setItem('pass',resetPass.newPassword);
+      setResetPass({confirmNewPassword:"",newPassword:"",oldPassword:""})
+      setResetPassword(!resetPassword);
+    }
+    }
   return (
     <div
       style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
@@ -760,7 +770,7 @@ setProfileData(initialProfileData);
           },
     endAdornment: (
       <InputAdornment position="end">
-        <Icon path={resetPass.currentPassword == resetPass.oldPassword?mdiLockOpenCheckOutline: mdiLockRemoveOutline} size={1} color={resetPass.currentPassword == resetPass.oldPassword?'green': 'red'} />
+        <Icon path={sessionStorage.getItem('pass') == resetPass.oldPassword?mdiLockOpenCheckOutline: mdiLockRemoveOutline} size={1} color={sessionStorage.getItem('pass') == resetPass.oldPassword?'green': 'red'} />
       </InputAdornment>
     ),
         }}
@@ -772,10 +782,10 @@ setProfileData(initialProfileData);
       />
         
                   <TextField
-        disabled={!resetPass.currentPassword == resetPass.oldPassword}
+                  onChange={(e) => setResetPass({ ...resetPass, newPassword: e.target.value })}
         type="password"
         required 
-        style={{ width: '45ch' }} 
+        style={{ width: '45ch',  display: sessionStorage.getItem('pass') === resetPass.oldPassword ? '' : 'none' }} 
         label='New Password' 
         variant="outlined"
         InputProps={{
@@ -790,16 +800,22 @@ setProfileData(initialProfileData);
         }}
       />
                   <TextField
-        
+                  onChange={(e) => setResetPass({ ...resetPass, confirmNewPassword: e.target.value })}
+        disabled={!( resetPass.newPassword != "")}
         type="password"
         required 
-        style={{ width: '45ch' }} 
+        style={{ width: '45ch' , display: sessionStorage.getItem('pass') === resetPass.oldPassword ? '' : 'none'}} 
         label='Confirm New Password' 
         variant="outlined"
         InputProps={{
           style: {
             color: 'white', // Set the text color to white
           },
+    endAdornment: (
+      <InputAdornment position="end">
+        <Icon path={(resetPass.newPassword == resetPass.confirmNewPassword) &&(resetPass.newPassword != '')?mdiCheck: mdiClose} size={1} color={(resetPass.newPassword == resetPass.confirmNewPassword)&&(resetPass.newPassword != '')?'green': 'red'} />
+      </InputAdornment>
+    ),
         }}
         InputLabelProps={{
           style: {
@@ -809,7 +825,7 @@ setProfileData(initialProfileData);
       />
 
                     </div>
-                    <Button style={{marginTop: '4vh',     backgroundColor: '#bebebea3',
+                    <Button onClick={()=>updatePass()} style={{display:sessionStorage.getItem('pass') === resetPass.oldPassword?'':'none', marginTop: '4vh',     backgroundColor: '#bebebea3',
     color: 'lightgrey',   width: 'fit-content'}} >Set Password</Button>
                   </div>
         </section>

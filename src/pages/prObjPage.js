@@ -1,4 +1,4 @@
-import { AppBar, Grid, MenuItem, Paper, Select, Tab, Table, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField } from "@material-ui/core";
+import { AppBar, Button, Grid, MenuItem, Paper, Select, Tab, Table, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField } from "@material-ui/core";
 import _ from 'lodash';
 import $ from 'jquery';
 import {
@@ -27,6 +27,7 @@ import {
   mdiFileUndoOutline,
   mdiTableRowPlusAfter,
   mdiTableRowRemove,
+  mdiAttachmentCheck,
 } from "@mdi/js";
 import 'react-vertical-timeline-component/style.min.css';
 import Icon from "@mdi/react";
@@ -39,6 +40,7 @@ import { DataGrid, renderEditInputCell, renderEditSingleSelectCell } from "@mate
 import { VerticalTimeline, VerticalTimelineElement } from "react-vertical-timeline-component";
 import { useNavigate, useParams } from "react-router-dom";
 import { SpinnerCircularSplit, SpinnerDiamond, SpinnerInfinity, SpinnerRomb } from "spinners-react";
+import { deleteFiles, getFilesByPurchaseId, getFilesByUrl, getPurchaseRequestsByCustomerId, getPurchaseRequestsByUUID, getRequestVehiclesByPurchaseEnquiryUuid, getUserById, getVehiclesInventory, postFilesPurchaseReq } from "../api";
 
 
 
@@ -50,14 +52,21 @@ var generalInfoInitialData ={};
 var commentsInitial ='';
 const PrObjectPage = ()=>{
 //    const initialUpdated = true;
+const[generalInfoLoader,setGeneralInfoLoader]=useState(true);
+const[vehiclesLoader,setVehiclesLoader]=useState(true);
 const[attachmentsLoader,setAttachmentsLoader]=useState(true);
 const [updated,setUpdated]=useState(true);   
 // const updated = false;
-
+const [vehiclesSh,setVehiclesSh]=useState([]);
+const [vehiclesShSelectedRows,setVehiclesShSelectedRows]=useState([]);
+const [vehiclesShDialog,setVehiclesShDialog]=useState(false);
 const [generalInfoData,setgeneralInfoData] = useState(generalInfoInitialData);
 const [comments,setComments] = useState(commentsInitial);
+const [pageState,setPageState] = useState("");
 
-
+const handleSelectionChange = (selection) => {
+  setVehiclesShSelectedRows(selection); // Update the state with selected row IDs
+};
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -68,9 +77,21 @@ const [comments,setComments] = useState(commentsInitial);
           document.body.style.zoom = "100%";
         };
       }, []);
+      // useEffect(async () => {
+        // const fetchPageData= async ()=>{
+          // try {
+            
+          
+          // } catch (error) {
+          //   console.error("Failed to fetch Purchase Request:", error);
+          // }
+        // }
+        // await fetchPageData();
+      // },[])
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [pageEditable, setPageEditable] = useState(false);
     const PageId = useParams().id;
-    const pageStatus = 'Draft Requests';
+    // const [pageStatus,setPageStatus] = useState("");
     const getIconForMediaType = (mediaType) => {
         switch (mediaType) {
           case "application/pdf":
@@ -171,54 +192,121 @@ const [comments,setComments] = useState(commentsInitial);
         //   fileName: "audio.mp3",
         // },
       // ];
-      useEffect(()=>{
-        $.ajax({
-          url: "https://dde7cfc6trial-dev-mahindra-sales-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/Files",
-          type: 'GET',
-          success: function(res) {
-              console.log("setting initialitems");
+      
+      useEffect( ()=>{
+        try {
+          
+       
+      //   $.ajax({
 
-              let initialItemsCopy = [];
-              for(let i=0;i<res.value.length;i++){
-                let obj = {};
-                obj.id = i + 1; 
-                obj.fileName = res.value[i].fileName;
-                obj.mediaType = res.value[i].mediaType;
-                obj.url = res.value[i].url;
-                obj.oId = res.value[i].ID;
-                initialItemsCopy.push(obj);
-              }
-              initialItems = initialItemsCopy;
+      //     url: "https://dde7cfc6trial-dev-mahindra-sales-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/Files",
+      //     type: 'GET',
+      //     success: function(res) {
+      //         console.log("setting initialitems");
+
+      //         // let initialItemsCopy = [];
+      //         for(let i=0;i<res.value.length;i++){
+      //           // let obj = {};
+      //           // obj.id = i + 1; 
+      //           // obj.fileName = res.value[i].fileName;
+      //           // obj.mediaType = res.value[i].mediaType;
+      //           // obj.url = res.value[i].url;
+      //           // obj.oId = res.value[i].ID;
+      //           // initialItemsCopy.push(obj);
+      //         }
+      //         // initialItems = initialItemsCopy;
+      //         // setItems(initialItems);
+      //         // setAttachmentsLoader(false);
+      //                 },
+      //     error : (res) => {
+      //       console.log(res);
+      //     }
+      // });
+
+      const fetchGeneralInfo = async ()=>{
+        let pr = await getPurchaseRequestsByUUID(PageId);
+        let custData = await getUserById(pr.data.value[0].customerId);
+        if(pr.data.value[0].status == 'Draft'){
+          setPageState('Draft');
+        setPageEditable(true);}
+        else if(pr.data.value[0].status == 'In Process'){
+          setPageState('Quotation');
+          setPageEditable(false)}
+        else{
+        setPageState('In Process');
+        setPageEditable(false);  
+      }
+        generalInfoInitialData = {
+          "companyName": custData.companyName,
+          "contactPerson": custData.contactPerson,
+          "phoneNumber": custData.phone,
+          "emailAddress": custData.email,
+          "van": custData.van,
+          "address": custData.address,
+          "documentType": pr.data.value[0].docType,
+          "salesOrg": pr.data.value[0].salesOrg,
+          "distributionChannel": pr.data.value[0].distributionChannels,
+          "division": pr.data.value[0].division
+        };
+
+        setgeneralInfoData(generalInfoInitialData);
+        setGeneralInfoLoader(false);
+        let vehicleInvData = await getVehiclesInventory();
+        let vehicleInvDataSh = [];
+        vehicleInvData.data.value.forEach((element,index) => {
+          let vhData ={id:index,vehicleCode:element.vehicleCode,vehicleName:element.vehicleName,vehicleColor:element.vehicleColor};
+          vehicleInvDataSh.push(vhData);
+        });
+        setVehiclesSh(vehicleInvDataSh);
+        setVehiclesLoader(false);
+        commentsInitial =pr.data.value[0].commentsText
+        setComments(commentsInitial);
+
+        
+      let requestVehicleData = await getRequestVehiclesByPurchaseEnquiryUuid(PageId);
+      let initialRowsLet =[];
+      requestVehicleData.data.value.forEach((vehileData,index)=>{
+        initialRowsLet.push({id:(index+1),vehicleCode:vehileData.materialCode,vehicleName:vehileData.vehicleName,vehicleColor:vehileData.vehicleColor,quantity:vehileData.quantity});
+      })
+      initialRows=initialRowsLet;
+    //   initialRows = [
+    //    // { id: 1, ID: 'QTN-001', DocType: 'Quotation', OrderType: 'Standard' ,OrderType1: 'Standard', OrderType2: 'Standard', OrderType3: 'Standard'},
+    //    // { id: 2, ID: 'QTN-002', DocType: 'Inquiry', OrderType: 'Express' ,OrderType1: 'Standard', OrderType2: 'Standard', OrderType3: 'Standard'},
+    //    // { id: 3, ID: 'QTN-003', DocType: 'Quotation', OrderType: 'Bulk Order' ,OrderType1: 'Standard', OrderType2: 'Standard', OrderType3: 'Standard'},
+    //    // { id: 4, ID: 'QTN-004', DocType: 'Inquiry', OrderType: 'Standard' ,OrderType1: 'Standard', OrderType2: 'Standard', OrderType3: 'Standard'},
+    //    // { id: 5, ID: 'QTN-005', vehicleCode: 'Quotation', OrderType: 'Custom' ,OrderType1: 'Standard', OrderType2: 'Standard', OrderType3: 'Standard'},
+    //  ];
+     setRows(initialRows);
+let FilesData = await getFilesByPurchaseId(PageId);
+let initialItemsCopy = [];
+// FilesData.data.value.forEach(async (file,index)=>{
+
+  for(let i = 0;i<FilesData.data.value.length;i++){
+    console.log(FilesData.data.value[i].id);
+    let fileObj = await getFilesByUrl(`EnquiryFiles/${FilesData.data.value[i].id}/content`);
+    console.log(fileObj);
+  
+    let obj = {};
+    obj.id = i + 1; 
+    obj.fileName = FilesData.data.value[i].fileName;
+    obj.mediaType = FilesData.data.value[i].mediaType;
+    obj.url =  URL.createObjectURL(fileObj);
+    obj.oId = FilesData.data.value[i].id;
+    initialItemsCopy.push(obj);
+}
+initialItems = initialItemsCopy;
               setItems(initialItems);
               setAttachmentsLoader(false);
-                      },
-          error : (res) => {
-            console.log(res);
-          }
-      });
-       initialRows = [
-        { id: 1, ID: 'QTN-001', DocType: 'Quotation', OrderType: 'Standard' ,OrderType1: 'Standard', OrderType2: 'Standard', OrderType3: 'Standard'},
-        { id: 2, ID: 'QTN-002', DocType: 'Inquiry', OrderType: 'Express' ,OrderType1: 'Standard', OrderType2: 'Standard', OrderType3: 'Standard'},
-        { id: 3, ID: 'QTN-003', DocType: 'Quotation', OrderType: 'Bulk Order' ,OrderType1: 'Standard', OrderType2: 'Standard', OrderType3: 'Standard'},
-        { id: 4, ID: 'QTN-004', DocType: 'Inquiry', OrderType: 'Standard' ,OrderType1: 'Standard', OrderType2: 'Standard', OrderType3: 'Standard'},
-        { id: 5, ID: 'QTN-005', DocType: 'Quotation', OrderType: 'Custom' ,OrderType1: 'Standard', OrderType2: 'Standard', OrderType3: 'Standard'},
-      ];
-      setRows(initialRows);
-       generalInfoInitialData = {
-        "companyName": "ABC Corp",
-        "contactPerson": "John Doe",
-        "phoneNumber": "+1234567890",
-        "emailAddress": "john.doe@abccorp.com",
-        "van": "VAN1234",
-        "address": "1234 Elm Street, Suite 567, Springfield, IL, USA",
-        "documentType": "Quotation",
-        "salesOrg": "Sales Organization 1",
-        "distributionChannel": "Channel 1",
-        "division": "Division A"
-      };
-      setgeneralInfoData(generalInfoInitialData);
-      commentsInitial = 'Draft Comments';
-      setComments(commentsInitial);
+
+      }
+      
+      fetchGeneralInfo();
+           
+      
+      
+    } catch (error) {
+          
+    }
       },[])
       const [items,setItems] = useState([]);
     
@@ -284,9 +372,17 @@ const [comments,setComments] = useState(commentsInitial);
         }
         uploadFile(uploadedFiles); 
       };
-      const handleCellEditCommit = (newRow) =>{
-        
-        
+      const handleEditCellChange  = (params) =>{
+        if(params.field == 'quantity'){
+          if (params.props.value < 0) {
+            params.props.value = 0;
+          } 
+          else if (params.props.value > 100) {
+            params.props.value = 100;
+          }
+        }
+      }
+      const handleCellEditCommit = (newRow) =>{ 
         let updatedRow = rows.filter((row)=>row.id == newRow.id)[0];
         updatedRow[newRow.field] = newRow.value;
         initialRowsCopy = rows.map((row)=>{    if (row.id === updatedRow.id) {
@@ -296,104 +392,199 @@ const [comments,setComments] = useState(commentsInitial);
         })
           }
     const columns = [
-        { field: "ID", headerName: "ID",editable: true, minWidth: 250 },
-        { field: "DocType", headerName: "DocType", flex: 1 ,editable: true ,renderEditCell :(params) =>  <EditDropdownCell {...params} /> ,minWidth: 250 },
-        { field: "OrderType", headerName: "OrderType", flex: 1 ,editable: true ,minWidth: 250 },
-        { field: "OrderType1", headerName: "OrderType1", flex: 1 ,editable: true ,minWidth: 250 },
-        { field: "OrderType2", headerName: "OrderType2", flex: 1 ,editable: true ,minWidth: 250 },
-        { field: "OrderType3", headerName: "OrderType3", flex: 1 ,editable: true ,minWidth: 250 },
+        { field: "vehicleCode", headerName: "Vehicle Code", minWidth: 300 },
+        // { field: "DocType", headerName: "DocType", flex: 1 ,editable: true ,renderEditCell :(params) =>  <EditDropdownCell {...params} /> ,minWidth: 250 },
+        { field: "vehicleName", headerName: "Vehicle Name", flex: 1  ,minWidth: 350 },
+        { field: "vehicleColor", headerName: "Vehicle Color", flex: 1  ,minWidth: 350 },
+        { field: "quantity", headerName: "quantity", flex: 1 ,editable: pageEditable ,minWidth: 200 ,type:'number' },
+      ];
+      const columnsVehicleSh = [
+        { field: "vehicleCode", headerName: "Vehicle Code", flex: 1  },
+        { field: "vehicleName", headerName: "Vehicle Name", flex: 1  },
+        { field: "vehicleColor", headerName: "Vehicle Color", flex: 1  }
       ];
      
       const handeSave = async () =>{
         setAttachmentsLoader(true);
         let newFiles = items.filter((item)=>!item.oId);
-        
-     for (let index = 0; index < newFiles.length; index++) {
-      const file ={
-        "mediaType": newFiles[index].mediaType,
-        "fileName": newFiles[index].fileName,
-        "size": newFiles[index].fileObj.size,
-        // "url": "https://6ad3155ftrial-dev-collage-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/Files(id=b740ff11-a084-4624-9bd2-feb7edac0891,IsActiveEntity=true)/content",
-        "IsActiveEntity": true,
-      };
-    await $.ajax({
-      url:'https://dde7cfc6trial-dev-mahindra-sales-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/Files',
-      method : "POST",
-      timeout:0,
-      data:JSON.stringify(file),
-      contentType:"application/json",
-      success:async function (params) {
-        console.log(params);
-        const reader = new FileReader();
-        reader.onload = async function (e) {
-            const arrayBuffer = e.target.result; // File data in ArrayBuffer format
-
-           await $.ajax({
-                url: `https://dde7cfc6trial-dev-mahindra-sales-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/Files(ID=${params.ID},IsActiveEntity=true)/content`,
-                method: 'PUT',
-                data: arrayBuffer,
-                processData: false, // Do not process the data
-                contentType: newFiles[index].fileObj.type, // Set content type to file's MIME type
-                success: function () {
-                    // alert('File uploaded successfully!');
-                },
-                error: function (err) {
-                    console.error('Error uploading file:', err);
-                    // alert('File upload failed.');
-                }
-            });
-        };
-        reader.readAsArrayBuffer(newFiles[index].fileObj);
-      },
-      error:function (params) {
-        console.log(params);
-      }
-    });  
-     };
-      
         let deletedFiles = initialItems.filter((iItem)=>!items.some(item => item.oId === iItem.oId));
-        for (let index = 0; index < deletedFiles.length; index++) {
-          const deleteUrl=`https://dde7cfc6trial-dev-mahindra-sales-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/Files(ID=${deletedFiles[index].oId},IsActiveEntity=true)`;
-          await $.ajax({
-            url:deleteUrl,
-            method:'DELETE',
-            success:function (params) {
-                console.log(params)            
-            },
-            error:function (params) {
-              console.log(params)            
-          }
+        // if(newFiles)
+        //   await newFilesPr;
+     
+        function newFilesPr() {
+          return  new Promise((resolve)=>{
+            for (let index = 0; index < newFiles.length; index++) {
+              const file ={
+                "mediaType": newFiles[index].mediaType,
+                "fileName": newFiles[index].fileName,
+                "size": newFiles[index].fileObj.size,
+                // "url": "https://6ad3155ftrial-dev-collage-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/Files(id=b740ff11-a084-4624-9bd2-feb7edac0891,IsActiveEntity=true)/content",
+                // "IsActiveEntity": true,
+                "purchaseEnquiryUuid":PageId
+              };
+              const reader = new FileReader();
+              
+              reader.onload = async function (e) {
+                const arrayBuffer = e.target.result; // File data in ArrayBuffer format
+                let res= await postFilesPurchaseReq(file,arrayBuffer);
+                console.log(res);
+              //  await $.ajax({
+              //       url: `https://dde7cfc6trial-dev-mahindra-sales-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/Files(ID=${params.ID},IsActiveEntity=true)/content`,
+              //       method: 'PUT',
+              //       data: arrayBuffer,
+              //       processData: false, // Do not process the data
+              //       contentType: newFiles[index].fileObj.type, // Set content type to file's MIME type
+              //       success: function () {
+              //           // alert('File uploaded successfully!');
+              //       },
+              //       error: function (err) {
+              //           console.error('Error uploading file:', err);
+              //           // alert('File upload failed.');
+              //       }
+              //   });
+            };
+            reader.readAsArrayBuffer(newFiles[index].fileObj);
+              
+        
+            // await $.ajax({
+            //   url:'https://dde7cfc6trial-dev-mahindra-sales-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/Files',
+            //   method : "POST",
+            //   timeout:0,
+            //   data:JSON.stringify(file),
+            //   contentType:"application/json",
+            //   success:async function (params) {
+            //     console.log(params);
+            //     // // const reader = new FileReader();
+            //     // reader.onload = async function (e) {
+            //     //     const arrayBuffer = e.target.result; // File data in ArrayBuffer format
+        
+            //     //    await $.ajax({
+            //     //         url: `https://dde7cfc6trial-dev-mahindra-sales-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/Files(ID=${params.ID},IsActiveEntity=true)/content`,
+            //     //         method: 'PUT',
+            //     //         data: arrayBuffer,
+            //     //         processData: false, // Do not process the data
+            //     //         contentType: newFiles[index].fileObj.type, // Set content type to file's MIME type
+            //     //         success: function () {
+            //     //             // alert('File uploaded successfully!');
+            //     //         },
+            //     //         error: function (err) {
+            //     //             console.error('Error uploading file:', err);
+            //     //             // alert('File upload failed.');
+            //     //         }
+            //     //     });
+            //     // };
+            //     // reader.readAsArrayBuffer(newFiles[index].fileObj);
+            //   },
+            //   error:function (params) {
+            //     console.log(params);
+            //   }
+            // });  
+             };
+             resolve();
+          })
+        }
+        
+        function deleteFilesPr(){
+          return  new Promise(async (resolve)=>{
+            let deletedRes =await deleteFiles(deletedFiles);
+            console.log(deletedRes);
+            // for (let index = 0; index < deletedFiles.length; index++) {
+            //   const deleteUrl=`https://dde7cfc6trial-dev-mahindra-sales-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/Files(ID=${deletedFiles[index].oId},IsActiveEntity=true)`;
+            //   await $.ajax({
+            //     url:deleteUrl,
+            //     method:'DELETE',
+            //     success:function (params) {
+            //         console.log(params)            
+            //     },
+            //     error:function (params) {
+            //       console.log(params)            
+            //   }
+            //   });
+              
+            // }
+  resolve();  
           });
-          
+        }
+        function resetFilesPr(){
+          return new Promise(async (resolve)=>{
+            
+    let FilesData = await getFilesByPurchaseId(PageId);
+    let initialItemsCopy = [];
+    // FilesData.data.value.forEach(async (file,index)=>{
+    
+      for(let i = 0;i<FilesData.data.value.length;i++){
+        console.log(FilesData.data.value[i].id);
+        let fileObj = await getFilesByUrl(`EnquiryFiles/${FilesData.data.value[i].id}/content`);
+        console.log(fileObj);
+      
+        let obj = {};
+        obj.id = i + 1; 
+        obj.fileName = FilesData.data.value[i].fileName;
+        obj.mediaType = FilesData.data.value[i].mediaType;
+        obj.url =  URL.createObjectURL(fileObj);
+        obj.oId = FilesData.data.value[i].id;
+        initialItemsCopy.push(obj);
+    }
+    initialItems = initialItemsCopy;
+                  setItems(initialItems);
+                  setAttachmentsLoader(false);
+                  resolve();
+          })
         }
 
-        $.ajax({
-          url: "https://dde7cfc6trial-dev-mahindra-sales-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/Files",
-          type: 'GET',
-          success: function(res) {
-              console.log("setting initialitems");
+        // Usage example
+        async function runFunction() {
+          await newFilesPr();
+          await deleteFilesPr();
+          await resetFilesPr();
+        }
+        
+        runFunction();
+        
 
-              let initialItemsCopy = [];
-              for(let i=0;i<res.value.length;i++){
-                let obj = {};
-                obj.id = i + 1; 
-                obj.fileName = res.value[i].fileName;
-                obj.mediaType = res.value[i].mediaType;
-                obj.url = res.value[i].url;
-                obj.oId = res.value[i].ID;
-                initialItemsCopy.push(obj);
-              }
-              initialItems = initialItemsCopy;
-              setItems(initialItems);
+
+        
+        
+        // if(deletedFiles)
+        //   await deleteFilesPr;
+       
+  //       Promise.all([newFilesPr, deleteFilesPr])
+  // .then(async () => {
+  //   console.log("done");
+    
+
+  // })
+  // .catch((error) => {
+  //   console.error("An error occurred:", error);
+  // });
+
+      //   $.ajax({
+      //     url: "https://dde7cfc6trial-dev-mahindra-sales-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/Files",
+      //     type: 'GET',
+      //     success: function(res) {
+      //         console.log("setting initialitems");
+
+      //         let initialItemsCopy = [];
+      //         for(let i=0;i<res.value.length;i++){
+      //           let obj = {};
+      //           obj.id = i + 1; 
+      //           obj.fileName = res.value[i].fileName;
+      //           obj.mediaType = res.value[i].mediaType;
+      //           obj.url = res.value[i].url;
+      //           obj.oId = res.value[i].ID;
+      //           initialItemsCopy.push(obj);
+      //         }
+      //         initialItems = initialItemsCopy;
+      //         setItems(initialItems);
               
-                      },
-          error : (res) => {
-            console.log(res);
-          }
-      });
+      //                 },
+      //     error : (res) => {
+      //       console.log(res);
+      //     }
+      // });
 
 
-        setAttachmentsLoader(false);
+      //   setAttachmentsLoader(false);
       }
       
       const [refreshKey, setRefreshKey] = useState(0);
@@ -408,9 +599,21 @@ const [comments,setComments] = useState(commentsInitial);
         rowInitialInput = initialRows;
     const [rows,setRows] = useState(rowInitialInput);
     const [selectedRows,setSelectedRows] = useState([]);
-    const addNewRow = () =>{
-        const newRow = {id: rows.length + 1 , ID: '', DocType: '', OrderType: '' ,OrderType1: '', OrderType2: '', OrderType3: ''};
-        setRows((prevRow) => [...prevRow,newRow]);
+    useEffect(()=>{
+      let updatedVehicleSh= vehiclesSh.filter((vSh)=>!rows.some((row) => row.vehicleCode === vSh.vehicleCode));
+      setVehiclesSh(updatedVehicleSh);
+     },[rows])
+    const addNewRow = (params) =>{
+      console.log(vehiclesShSelectedRows);
+      let newVehicles = vehiclesSh.filter((vehicle)=>vehiclesShSelectedRows.includes(vehicle.id));
+      setVehiclesShDialog(false);
+      newVehicles.forEach(async (newVeh,index) =>{
+        newVeh.id = rows.length + (index + 1);
+// const newRow = {id: rows.length + 1 ,vehicleCode:newVeh.vehicleCode,vehicleName:newVeh.vehicleName,vehicleColor:newVeh.vehicleColor};
+
+      })
+       setRows((prevRow) => [...prevRow, ...newVehicles]);   
+       setVehiclesShSelectedRows([]);    
     }
    
     const removeRow = () =>{
@@ -420,7 +623,15 @@ const [comments,setComments] = useState(commentsInitial);
                     ...row,
                     id: index + 1, // Reassign IDs starting from 1
                 }));
-                
+              let newVehicleSh = rows.filter((row)=>filteredRows.some((fRow)=>fRow.vehicleCode !=  row.vehicleCode) );
+              newVehicleSh.forEach((newVh,index)=>{
+                newVh.id = index+1;
+              });
+              vehiclesSh.forEach((vSh,index)=>{
+                vSh.id = newVehicleSh.length + (index+1);
+                newVehicleSh.push(vSh);
+              })
+              setVehiclesSh(newVehicleSh);
             setRows(filteredRows);
             setSelectedRows([]);
             refreshElementById();
@@ -498,7 +709,7 @@ const [comments,setComments] = useState(commentsInitial);
                 />
             <span style={{    fontSize: 'x-large',
     fontFamily: 'auto'}}>
-            {pageStatus}
+            {pageState}
         </span></div>
          
             </section>
@@ -610,117 +821,153 @@ fontSize: 'x-large',
 fontFamily: 'auto',
 color: '#6d6d6d'}}>General Information.</span>
         </div>
-        <div style={{ display: 'flex',
-        gap: '20px 40px',
-        justifyContent: 'center',
-flexDirection: 'row',
-flexWrap: 'wrap',     padding: '30px',  minHeight: '100px'}}>
+        {generalInfoLoader?( <SpinnerCircularSplit
+              style={{ margin: "auto",padding: '30px',  minHeight: '350px' }}
+              color="rgb(229 193 0)"
+            ></SpinnerCircularSplit>):(
+              <div style={{ display: 'flex',
+                gap: '20px 40px',
+                justifyContent: 'center',
+        flexDirection: 'row',
+        flexWrap: 'wrap',     padding: '30px',  minHeight: '100px'}}>
+                
+                <TextField 
+                  InputProps={{
+                    readOnly: !pageEditable,
+                  }}
+                value={generalInfoData.companyName} 
+                className="prfields" 
+                required 
+                style={{ width: '60ch', backgroundColor: 'white' }} 
+                label='Company Name' 
+                variant="outlined"
+                onChange={(e) => {
+                    
+                    setgeneralInfoData({ ...generalInfoData, companyName: e.target.value });
+                    
+            }}
+              />
         
-        <TextField 
-        value={generalInfoData.companyName} 
-        className="prfields" 
-        required 
-        style={{ width: '60ch', backgroundColor: 'white' }} 
-        label='Company Name' 
-        variant="outlined"
-        onChange={(e) => {
-            
-            setgeneralInfoData({ ...generalInfoData, companyName: e.target.value });
-            
-    }}
-      />
-
-      <TextField 
-        value={generalInfoData.contactPerson} 
-        className="prfields" 
-        required 
-        style={{ width: '35ch', backgroundColor: 'white' }} 
-        label='Contact Person' 
-        variant="outlined"
-        onChange={(e) => setgeneralInfoData({ ...generalInfoData, contactPerson: e.target.value })}
-      />
-
-      <TextField 
-        value={generalInfoData.phoneNumber} 
-        className="prfields" 
-        required 
-        style={{ width: '25ch', backgroundColor: 'white' }} 
-        label='Phone Number' 
-        variant="outlined"
-        onChange={(e) => setgeneralInfoData({ ...generalInfoData, phoneNumber: e.target.value })}
-      />
-
-      <TextField 
-        value={generalInfoData.emailAddress} 
-        className="prfields" 
-        required 
-        style={{ width: '35ch', backgroundColor: 'white' }} 
-        label='Email Address' 
-        variant="outlined"
-        onChange={(e) => setgeneralInfoData({ ...generalInfoData, emailAddress: e.target.value })}
-      />
-
-      <TextField 
-        value={generalInfoData.van} 
-        className="prfields" 
-        required 
-        style={{ width: '30ch', backgroundColor: 'white' }} 
-        label='VAN' 
-        variant="outlined"
-        onChange={(e) => setgeneralInfoData({ ...generalInfoData, van: e.target.value })}
-      />
-
-      <TextField 
-        value={generalInfoData.address} 
-        className="prfields" 
-        required 
-        style={{ width: '110ch', backgroundColor: 'white' }} 
-        label='Address' 
-        variant="outlined"
-        onChange={(e) => setgeneralInfoData({ ...generalInfoData, address: e.target.value })}
-      />
-
-      <TextField 
-        value={generalInfoData.documentType} 
-        className="prfields" 
-        required 
-        style={{ width: '25ch', backgroundColor: 'white' }} 
-        label='Document Type' 
-        variant="outlined"
-        onChange={(e) => setgeneralInfoData({ ...generalInfoData, documentType: e.target.value })}
-      />
-
-      <TextField 
-        value={generalInfoData.salesOrg} 
-        className="prfields" 
-        required 
-        style={{ width: '25ch', backgroundColor: 'white' }} 
-        label='Sales Org.' 
-        variant="outlined"
-        onChange={(e) => setgeneralInfoData({ ...generalInfoData, salesOrg: e.target.value })}
-      />
-
-      <TextField 
-        value={generalInfoData.distributionChannel} 
-        className="prfields" 
-        required 
-        style={{ width: '25ch', backgroundColor: 'white' }} 
-        label='Distribution Channel' 
-        variant="outlined"
-        onChange={(e) => setgeneralInfoData({ ...generalInfoData, distributionChannel: e.target.value })}
-      />
-
-      <TextField 
-        value={generalInfoData.division} 
-        className="prfields" 
-        required 
-        style={{ width: '25ch', backgroundColor: 'white' }} 
-        label='Division' 
-        variant="outlined"
-        onChange={(e) => setgeneralInfoData({ ...generalInfoData, division: e.target.value })}
-      />
-
-        </div>
+              <TextField 
+                InputProps={{
+                  readOnly: !pageEditable,
+                }}
+                value={generalInfoData.contactPerson} 
+                className="prfields" 
+                required 
+                style={{ width: '35ch', backgroundColor: 'white' }} 
+                label='Contact Person' 
+                variant="outlined"
+                onChange={(e) => setgeneralInfoData({ ...generalInfoData, contactPerson: e.target.value })}
+              />
+        
+              <TextField 
+                InputProps={{
+                  readOnly: !pageEditable,
+                }}
+                value={generalInfoData.phoneNumber} 
+                className="prfields" 
+                required 
+                style={{ width: '25ch', backgroundColor: 'white' }} 
+                label='Phone Number' 
+                variant="outlined"
+                onChange={(e) => setgeneralInfoData({ ...generalInfoData, phoneNumber: e.target.value })}
+              />
+        
+              <TextField 
+                InputProps={{
+                  readOnly: !pageEditable,
+                }}
+                value={generalInfoData.emailAddress} 
+                className="prfields" 
+                required 
+                style={{ width: '35ch', backgroundColor: 'white' }} 
+                label='Email Address' 
+                variant="outlined"
+                onChange={(e) => setgeneralInfoData({ ...generalInfoData, emailAddress: e.target.value })}
+              />
+        
+              <TextField 
+                InputProps={{
+                  readOnly: true, 
+                }}
+                value={generalInfoData.van} 
+                className="prfields" 
+                required 
+                style={{ width: '30ch', backgroundColor: 'white' }} 
+                label='VAN' 
+                variant="outlined"
+                onChange={(e) => setgeneralInfoData({ ...generalInfoData, van: e.target.value })}
+              />
+        
+              <TextField 
+                InputProps={{
+                  readOnly: !pageEditable,
+                }}
+                value={generalInfoData.address} 
+                className="prfields" 
+                required 
+                style={{ width: '110ch', backgroundColor: 'white' }} 
+                label='Address' 
+                variant="outlined"
+                onChange={(e) => setgeneralInfoData({ ...generalInfoData, address: e.target.value })}
+              />
+        
+              <TextField 
+                InputProps={{
+                  readOnly: !pageEditable,
+                }}
+                value={generalInfoData.documentType} 
+                className="prfields" 
+                required 
+                style={{ width: '25ch', backgroundColor: 'white' }} 
+                label='Document Type' 
+                variant="outlined"
+                onChange={(e) => setgeneralInfoData({ ...generalInfoData, documentType: e.target.value })}
+              />
+        
+              <TextField 
+                InputProps={{
+                  readOnly: !pageEditable,
+                }}
+                value={generalInfoData.salesOrg} 
+                className="prfields" 
+                required 
+                style={{ width: '25ch', backgroundColor: 'white' }} 
+                label='Sales Org.' 
+                variant="outlined"
+                onChange={(e) => setgeneralInfoData({ ...generalInfoData, salesOrg: e.target.value })}
+              />
+        
+              <TextField 
+                InputProps={{
+                  readOnly: !pageEditable,
+                }}
+                value={generalInfoData.distributionChannel} 
+                className="prfields" 
+                required 
+                style={{ width: '25ch', backgroundColor: 'white' }} 
+                label='Distribution Channel' 
+                variant="outlined"
+                onChange={(e) => setgeneralInfoData({ ...generalInfoData, distributionChannel: e.target.value })}
+              />
+        
+              <TextField 
+                InputProps={{
+                  readOnly: !pageEditable,
+                }}
+                value={generalInfoData.division} 
+                className="prfields" 
+                required 
+                style={{ width: '25ch', backgroundColor: 'white' }} 
+                label='Division' 
+                variant="outlined"
+                onChange={(e) => setgeneralInfoData({ ...generalInfoData, division: e.target.value })}
+              />
+        
+                </div>
+            )}
+       
       </div>
     </section>
     <section  style={{ marginTop: "10vh", marginLeft: "15vh", marginRight: "15vh" }}>
@@ -756,7 +1003,7 @@ fontSize: 'x-large',
 fontFamily: 'auto',
 color: '#6d6d6d'}}>List of Items.</span>
 
-    <button id="prObjPageSectionButton" className="footerbarbutton" style={{    marginLeft: 'auto',
+    <button hidden={!pageEditable} id="prObjPageSectionButton" className="footerbarbutton" style={{    marginLeft: 'auto',
     marginRight: '6vh',
     paddingLeft: '15px',
     height: 'min-content',
@@ -768,7 +1015,7 @@ color: '#6d6d6d'}}>List of Items.</span>
     boxShadow: '0px 3px 8px rgb(0 0 0 / 66%)',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease'}} title="Remove Row." 
     onClick={removeRow}><Icon path={mdiTableRowRemove} size={1.3} color='white'></Icon></button>
-    <button id="prObjPageSectionButton" className="footerbarbutton" style={{ 
+    <button hidden={!pageEditable} id="prObjPageSectionButton" className="footerbarbutton" style={{ 
     marginRight: '20vh',
     paddingLeft: '15px',
     height: 'min-content',
@@ -778,9 +1025,9 @@ color: '#6d6d6d'}}>List of Items.</span>
     border: 'none',
     backgroundColor: '#6d6d6d',
     boxShadow: '0px 3px 8px rgb(0 0 0 / 66%)',
-    transition: 'transform 0.2s ease, box-shadow 0.2s ease'}} title="Add Row."  onClick={addNewRow}><Icon path={mdiTableRowPlusAfter} size={1.3} color='white'></Icon></button>
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease'}} title="Add Row."  onClick={()=>setVehiclesShDialog(true)}><Icon path={mdiTableRowPlusAfter} size={1.3} color='white'></Icon></button>
         </div>
-            <div style={{ padding: '30px',  minHeight: '100px'}}>
+            <div style={{ padding: '30px',  minHeight: '100px',    textAlign: vehiclesLoader?'center':''}}>
             {/* <table>
               <thead>
                 <tr>
@@ -799,7 +1046,11 @@ color: '#6d6d6d'}}>List of Items.</span>
             </table> */}
             
 <Paper sx={{ height: '400px', width: '100%' }} id="myDataGrid">
-<DataGrid
+{vehiclesLoader?(<SpinnerCircularSplit
+              style={{ margin: "auto",padding: '30px',  minHeight: '350px' }}
+              color="rgb(229 193 0)"
+            ></SpinnerCircularSplit>):(
+              <DataGrid
         key={refreshKey}
         onSelectionModelChange={(params) => setSelectedRows(params)}
        rows={rows}
@@ -807,12 +1058,15 @@ color: '#6d6d6d'}}>List of Items.</span>
        style={{ maxHeight: '550px', width: '100%',overflowY:'scroll',scrollbarWidth: 'thin',
         scrollbarColor: '#e5c100 #d6d6d6' }}
               autoHeight
-       checkboxSelection
+       checkboxSelection={pageEditable}
        disableSelectionOnClick
       onCellEditCommit={handleCellEditCommit}
+      onEditCellPropsChange={handleEditCellChange}
  >
   
 </DataGrid>
+            )}
+
 {/* <DataGrid></DataGrid> */}
   {/* <DataGrid
     rows={rows}
@@ -871,7 +1125,8 @@ flexDirection: 'row',   padding: '30px',  minHeight: '100px'}}>
         
         
         <div id="files" className="files">
-      <div id="dragbox"  style={{
+
+          {pageEditable && <div id="dragbox"  style={{
     backgroundImage: `url(${emptyFilesGif})`,    backgroundSize: 'contain', // Adjust size to fit
     backgroundPosition: 'center',
     backgroundRepeat: 'no-repeat',
@@ -883,16 +1138,21 @@ flexDirection: 'row',   padding: '30px',  minHeight: '100px'}}>
         <h3 style={{    marginBottom: '100%',
     fontFamily: 'system-ui',
     fontWeight: 'lighter'}}>Click / Browse Files to Upload!</h3>
-      </div>
+      </div>}
+      
 {attachmentsLoader?(
   <SpinnerRomb size="6%" thickness={120} style={{margin:'auto'}} ></SpinnerRomb>
 ):(    items.length > 0 ? (
   <ul className="file-list" style={{ padding: "2%", width: "60%" }}>
     {items.map((file) => (
-      <li key={file.id} className="file-item">
+      <li key={file.id} style={{    width:!pageEditable?'80%':'auto',
+        placeSelf:!pageEditable? 'center':''}} className="file-item">
         {getIconForMediaType(file.mediaType)}
         <h2 onClick={() => openFile(file)} className="filename">{file.fileName}</h2>
-        <Icon className="deletebutton" path={mdiDeleteForever} size={2} color="red" onClick={() => deleteFile(file)} />
+        {pageEditable?(<Icon  className="deletebutton" path={mdiDeleteForever} size={2} color="red" onClick={() => deleteFile(file)} />):(
+          <Icon   path={mdiAttachmentCheck} size={2} color="gray" />
+        )}
+        
       </li>
     ))}
   </ul>
@@ -1206,6 +1466,63 @@ Close
     </div>
 )} 
 </div>
+
+{vehiclesShDialog && <section style={{  height: '100vh',
+    width: '100vw',}}>
+  <div onClick={()=>setVehiclesShDialog(false)} style={{   backdropFilter: 'blur(2px)',
+    backgroundColor: '#87868a8f',
+    height: '-webkit-fill-available',
+    width: '-webkit-fill-available',
+    zIndex: '1100',
+    position: 'fixed',
+    top: '0',
+    left: '0'}}></div>
+  <div
+  style={{
+    zIndex: '1100',
+    position: 'fixed',
+    top: '0', // Ensure it's positioned at the top of the page
+    left: '0', // Align with the left side of the page
+    backgroundColor: '#ffffff',
+    borderRadius: '10px',
+    width: '170vh',
+    height: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    positionArea: 'center'
+  }}
+>
+  {/* Header Section */}
+  <h3 style={{ margin: '20px', flex: '0 0 auto' }}>Add Vehicles</h3>
+
+  {/* Scrollable DataGrid Section */}
+  <Paper style={{ flex: '1 1 auto', overflow: 'hidden' }}>
+    <div style={{ height: '100%', overflowY: 'scroll',scrollbarWidth:'thin' }}>
+      <DataGrid
+
+        rows={vehiclesSh}
+        columns={columnsVehicleSh}
+        autoHeight
+        pageSize={15}
+        checkboxSelection
+        disableSelectionOnClick
+        onSelectionModelChange={(newSelection) => handleSelectionChange(newSelection)}
+      />
+    </div>
+  </Paper>
+
+  {/* Button Section */}
+  <div style={{ padding: '20px', flex: '0 0 auto', textAlign: 'center' }}>
+    <Button onClick={(params)=>addNewRow(params)} style={{    background: '#6d6d6d',
+    color: 'white'}}>Confirm</Button>
+  </div>
+</div>
+
+
+</section>}
+
+
+
 
 <footer style={{display: 'flex',
     flexDirection: 'row', backgroundColor: '#030e22' ,    marginTop: '40px',
