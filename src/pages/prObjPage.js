@@ -1,6 +1,8 @@
-import { AppBar, Button, Grid, MenuItem, Paper, Select, Tab, Table, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField } from "@material-ui/core";
+import { AppBar, Button, Grid, IconButton, MenuItem, Paper, Select, Tab, Table, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField } from "@material-ui/core";
 import _ from 'lodash';
 import $ from 'jquery';
+// import AddIcon from "@mui/icons-material/Add";
+// import RemoveIcon from "@mui/icons-material/Remove";
 import {
   mdiListBoxOutline,
   mdiFile,
@@ -28,6 +30,9 @@ import {
   mdiTableRowPlusAfter,
   mdiTableRowRemove,
   mdiAttachmentCheck,
+  mdiForumOutline,
+  mdiMinus,
+  mdiPlus,
 } from "@mdi/js";
 import 'react-vertical-timeline-component/style.min.css';
 import Icon from "@mdi/react";
@@ -40,7 +45,7 @@ import { DataGrid, renderEditInputCell, renderEditSingleSelectCell } from "@mate
 import { VerticalTimeline, VerticalTimelineElement } from "react-vertical-timeline-component";
 import { useNavigate, useParams } from "react-router-dom";
 import { SpinnerCircularSplit, SpinnerDiamond, SpinnerInfinity, SpinnerRomb } from "spinners-react";
-import { deleteFiles, getFilesByPurchaseId, getFilesByUrl, getPurchaseRequestsByCustomerId, getPurchaseRequestsByUUID, getRequestVehiclesByPurchaseEnquiryUuid, getUserById, getVehiclesInventory, postFilesPurchaseReq } from "../api";
+import { deleteAndUpdRequestVehiclesByMaterialCode, deleteFiles, deleteRequestVehiclesByMaterialCode, getFilesByPurchaseId, getFilesByUrl, getPurchaseRequestsByCustomerId, getPurchaseRequestsByUUID, getRequestVehiclesByPurchaseEnquiryUuid, getUserById, getVehiclesInventory, patchGeneralInfo, postFilesPurchaseReq, postRequestVehiclesByMaterialCode } from "../api";
 
 
 
@@ -48,6 +53,7 @@ import { deleteFiles, getFilesByPurchaseId, getFilesByUrl, getPurchaseRequestsBy
 var initialRowsCopy;
 var initialItems = [];
 var initialRows = [];
+var initialRows1 = [];
 var generalInfoInitialData ={};
 var commentsInitial ='';
 const PrObjectPage = ()=>{
@@ -231,7 +237,7 @@ const handleSelectionChange = (selection) => {
         setPageEditable(true);}
         else if(pr.data.value[0].status == 'In Process'){
           setPageState('Quotation');
-          setPageEditable(false)}
+          setPageEditable(true)}
         else{
         setPageState('In Process');
         setPageEditable(false);  
@@ -254,7 +260,7 @@ const handleSelectionChange = (selection) => {
         let vehicleInvData = await getVehiclesInventory();
         let vehicleInvDataSh = [];
         vehicleInvData.data.value.forEach((element,index) => {
-          let vhData ={id:index,vehicleCode:element.vehicleCode,vehicleName:element.vehicleName,vehicleColor:element.vehicleColor};
+          let vhData ={id:index,vehicleCode:element.vehicleCode,vehicleName:element.vehicleName,vehicleColor:element.vehicleColor,quantity:1};
           vehicleInvDataSh.push(vhData);
         });
         setVehiclesSh(vehicleInvDataSh);
@@ -265,8 +271,9 @@ const handleSelectionChange = (selection) => {
         
       let requestVehicleData = await getRequestVehiclesByPurchaseEnquiryUuid(PageId);
       let initialRowsLet =[];
+      console.log(requestVehicleData)
       requestVehicleData.data.value.forEach((vehileData,index)=>{
-        initialRowsLet.push({id:(index+1),vehicleCode:vehileData.materialCode,vehicleName:vehileData.vehicleName,vehicleColor:vehileData.vehicleColor,quantity:vehileData.quantity});
+        initialRowsLet.push({id:(index+1),vehicleCode:vehileData.materialCode,vehicleName:vehileData.vehicleName,vehicleColor:vehileData.vehicleColor,quantity:vehileData.quantity,uuid:vehileData.vehicleId});
       })
       initialRows=initialRowsLet;
     //   initialRows = [
@@ -277,6 +284,12 @@ const handleSelectionChange = (selection) => {
     //    // { id: 5, ID: 'QTN-005', vehicleCode: 'Quotation', OrderType: 'Custom' ,OrderType1: 'Standard', OrderType2: 'Standard', OrderType3: 'Standard'},
     //  ];
      setRows(initialRows);
+     if(initialRows1.length!=initialRows.length)
+      initialRows.forEach((row)=>{
+        initialRows1.push(row);
+        console.log(row);
+      });
+     
 let FilesData = await getFilesByPurchaseId(PageId);
 let initialItemsCopy = [];
 // FilesData.data.value.forEach(async (file,index)=>{
@@ -305,7 +318,7 @@ initialItems = initialItemsCopy;
       
       
     } catch (error) {
-          
+            console.error(error);
     }
       },[])
       const [items,setItems] = useState([]);
@@ -391,12 +404,88 @@ initialItems = initialItemsCopy;
         return row; // Return the original row if it's not the updated one
         })
           }
+
+
+          const [errors, setErrors] = useState({}); // Track errors by row ID
+
+          const updateQuantity = (id, value) => {
+            setRows((prevRows) =>
+              prevRows.map((row) =>
+                row.id === id ? { ...row, quantity: value } : row
+              )
+            );
+          };
+        
+          const handleInputChange = (id, value) => {
+            if (value >= 1 && value <= 100) {
+              updateQuantity(id, value);
+              setErrors((prev) => ({ ...prev, [id]: false }));
+            } else {
+              setErrors((prev) => ({ ...prev, [id]: true }));
+            }
+          };
+        
     const columns = [
         { field: "vehicleCode", headerName: "Vehicle Code", minWidth: 300 },
         // { field: "DocType", headerName: "DocType", flex: 1 ,editable: true ,renderEditCell :(params) =>  <EditDropdownCell {...params} /> ,minWidth: 250 },
         { field: "vehicleName", headerName: "Vehicle Name", flex: 1  ,minWidth: 350 },
         { field: "vehicleColor", headerName: "Vehicle Color", flex: 1  ,minWidth: 350 },
-        { field: "quantity", headerName: "quantity", flex: 1 ,editable: pageEditable ,minWidth: 200 ,type:'number' },
+        // { field: "quantity", headerName: "quantity", flex: 1 ,editable: pageEditable ,minWidth: 200 ,type:'number' },
+        {
+          field: "quantity",
+          headerName: "Quantity",
+          flex: 1,
+          minWidth: 200,
+          // editable: true,
+          type: "number",
+          renderCell: pageEditable?(params) => {
+            const hasError = errors[params.id] || false;
+    
+            return (
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <Button
+                  onClick={() =>
+                    handleInputChange(params.id, params.row.quantity - 1)
+                  }
+                  disabled={params.row.quantity <= 1}
+                >
+                  {/* <RemoveIcon /> */}
+
+                  <Icon 
+                  path={mdiMinus}
+                  size={1}
+                  color="black"
+                  style={{ marginRight: "8px" }}
+                />
+                </Button>
+                <TextField
+                  value={params.row.quantity}
+                  onChange={(e) =>
+                    handleInputChange(params.id, parseInt(e.target.value, 10) || 0)
+                  }
+                  error={hasError}
+                  helperText={hasError ? "Quantity must be between 1 and 100" : ""}
+                  variant="standard"
+                  // size="small"
+                  style={{ width: "60px", margin: "0 10px" }}
+                />
+                <Button
+                  onClick={() =>
+                    handleInputChange(params.id, params.row.quantity + 1)
+                  }
+                  disabled={params.row.quantity >= 100}
+                >
+                 <Icon 
+                  path={mdiPlus}
+                  size={1}
+                  color="black"
+                  style={{ marginRight: "8px" }}
+                />
+                </Button>
+              </div>
+            );
+          }:undefined,
+        },
       ];
       const columnsVehicleSh = [
         { field: "vehicleCode", headerName: "Vehicle Code", flex: 1  },
@@ -406,6 +495,77 @@ initialItems = initialItemsCopy;
      
       const handeSave = async () =>{
         setAttachmentsLoader(true);
+        if(!_.isEqual(generalInfoData, generalInfoInitialData)){
+          setGeneralInfoLoader(true);
+          try {
+            let body={contactPerson:generalInfoData.contactPerson,distributionChannels:generalInfoData.distributionChannel,division:generalInfoData.division,docType:generalInfoData.documentType,salesOrg:generalInfoData.salesOrg}
+            let res=await patchGeneralInfo(PageId,body);
+            console.log(res);
+            let pr = await getPurchaseRequestsByUUID(PageId);
+        let custData = await getUserById(pr.data.value[0].customerId);
+            generalInfoInitialData = {
+              "companyName": custData.companyName,
+              "contactPerson": custData.contactPerson,
+              "phoneNumber": custData.phone,
+              "emailAddress": custData.email,
+              "van": custData.van,
+              "address": custData.address,
+              "documentType": pr.data.value[0].docType,
+              "salesOrg": pr.data.value[0].salesOrg,
+              "distributionChannel": pr.data.value[0].distributionChannels,
+              "division": pr.data.value[0].division
+            };
+    
+            setgeneralInfoData(generalInfoInitialData);
+            setGeneralInfoLoader(false);
+          } catch (error) {
+              console.error("Failed to updategeneralInfo:", error);
+          }
+          setGeneralInfoLoader(false);
+          }
+          if(!_.isEqual(rows, initialRows)){
+            try {
+              setVehiclesLoader(true);
+              let deletedRows = initialRows.filter((initialRow)=>!rows.some((row)=>row.vehicleCode == initialRow.vehicleCode));
+
+              let newRows = rows.filter((row)=>!initialRows.some((iRow)=>iRow.vehicleCode== row.vehicleCode));
+              // let updatedRows = rows.filter((row)=>initialRows.some((iRow)=>iRow.vehicleCode== row.vehicleCode ));
+              let updatedRows = rows.filter((row) => 
+                initialRows1.some((iRow) => 
+                  (iRow.vehicleCode == row.vehicleCode && iRow.quantity != row.quantity)
+                )
+              );
+
+              const vehicleItemsOnSave = async ()=>{
+                return new Promise(async (resolve)=>{
+                  let delRes=await deleteAndUpdRequestVehiclesByMaterialCode(initialRows1,deletedRows,updatedRows,PageId);
+              let postRes = await postRequestVehiclesByMaterialCode(newRows,PageId);
+             
+              resolve()
+                })
+              }
+              await vehicleItemsOnSave();
+              let requestVehicleData = await getRequestVehiclesByPurchaseEnquiryUuid(PageId);
+              let initialRowsLet =[];
+              console.log(requestVehicleData)
+              requestVehicleData.data.value.forEach((vehileData,index)=>{
+                initialRowsLet.push({id:(index+1),vehicleCode:vehileData.materialCode,vehicleName:vehileData.vehicleName,vehicleColor:vehileData.vehicleColor,quantity:vehileData.quantity,uuid:vehileData.vehicleId});
+              })
+              initialRows=initialRowsLet;
+            
+             setRows(initialRows);
+             if(initialRows1.length!=initialRows.length)
+              initialRows.forEach((row)=>{
+                initialRows1.push(row);
+                console.log(row);
+              });
+              setVehiclesLoader(false);
+            } catch (error) {
+              console.error("Failed to Update vehice Items:", error);
+            }
+            setVehiclesLoader(false)
+          }
+
         let newFiles = items.filter((item)=>!item.oId);
         let deletedFiles = initialItems.filter((iItem)=>!items.some(item => item.oId === iItem.oId));
         // if(newFiles)
@@ -602,6 +762,7 @@ initialItems = initialItemsCopy;
     useEffect(()=>{
       let updatedVehicleSh= vehiclesSh.filter((vSh)=>!rows.some((row) => row.vehicleCode === vSh.vehicleCode));
       setVehiclesSh(updatedVehicleSh);
+
      },[rows])
     const addNewRow = (params) =>{
       console.log(vehiclesShSelectedRows);
@@ -626,9 +787,11 @@ initialItems = initialItemsCopy;
               let newVehicleSh = rows.filter((row)=>filteredRows.some((fRow)=>fRow.vehicleCode !=  row.vehicleCode) );
               newVehicleSh.forEach((newVh,index)=>{
                 newVh.id = index+1;
+                newVh.quantity = 1;
               });
               vehiclesSh.forEach((vSh,index)=>{
                 vSh.id = newVehicleSh.length + (index+1);
+                
                 newVehicleSh.push(vSh);
               })
               setVehiclesSh(newVehicleSh);
@@ -833,12 +996,12 @@ color: '#6d6d6d'}}>General Information.</span>
                 
                 <TextField 
                   InputProps={{
-                    readOnly: !pageEditable,
+                    readOnly: true,
                   }}
                 value={generalInfoData.companyName} 
                 className="prfields" 
                 required 
-                style={{ width: '60ch', backgroundColor: 'white' }} 
+                style={{ width: '60ch', backgroundColor: 'aliceblue' }} 
                 label='Company Name' 
                 variant="outlined"
                 onChange={(e) => {
@@ -850,12 +1013,12 @@ color: '#6d6d6d'}}>General Information.</span>
         
               <TextField 
                 InputProps={{
-                  readOnly: !pageEditable,
+                  readOnly: true,
                 }}
                 value={generalInfoData.contactPerson} 
                 className="prfields" 
                 required 
-                style={{ width: '35ch', backgroundColor: 'white' }} 
+                style={{ width: '35ch', backgroundColor: 'aliceblue' }} 
                 label='Contact Person' 
                 variant="outlined"
                 onChange={(e) => setgeneralInfoData({ ...generalInfoData, contactPerson: e.target.value })}
@@ -863,12 +1026,12 @@ color: '#6d6d6d'}}>General Information.</span>
         
               <TextField 
                 InputProps={{
-                  readOnly: !pageEditable,
+                  readOnly: true,
                 }}
                 value={generalInfoData.phoneNumber} 
                 className="prfields" 
                 required 
-                style={{ width: '25ch', backgroundColor: 'white' }} 
+                style={{ width: '25ch', backgroundColor: 'aliceblue' }} 
                 label='Phone Number' 
                 variant="outlined"
                 onChange={(e) => setgeneralInfoData({ ...generalInfoData, phoneNumber: e.target.value })}
@@ -876,12 +1039,12 @@ color: '#6d6d6d'}}>General Information.</span>
         
               <TextField 
                 InputProps={{
-                  readOnly: !pageEditable,
+                  readOnly: true,
                 }}
                 value={generalInfoData.emailAddress} 
                 className="prfields" 
                 required 
-                style={{ width: '35ch', backgroundColor: 'white' }} 
+                style={{ width: '35ch', backgroundColor: 'aliceblue' }} 
                 label='Email Address' 
                 variant="outlined"
                 onChange={(e) => setgeneralInfoData({ ...generalInfoData, emailAddress: e.target.value })}
@@ -894,7 +1057,7 @@ color: '#6d6d6d'}}>General Information.</span>
                 value={generalInfoData.van} 
                 className="prfields" 
                 required 
-                style={{ width: '30ch', backgroundColor: 'white' }} 
+                style={{ width: '30ch', backgroundColor: 'aliceblue' }} 
                 label='VAN' 
                 variant="outlined"
                 onChange={(e) => setgeneralInfoData({ ...generalInfoData, van: e.target.value })}
@@ -902,12 +1065,12 @@ color: '#6d6d6d'}}>General Information.</span>
         
               <TextField 
                 InputProps={{
-                  readOnly: !pageEditable,
+                  readOnly: true,
                 }}
                 value={generalInfoData.address} 
                 className="prfields" 
                 required 
-                style={{ width: '110ch', backgroundColor: 'white' }} 
+                style={{ width: '110ch', backgroundColor: 'aliceblue' }} 
                 label='Address' 
                 variant="outlined"
                 onChange={(e) => setgeneralInfoData({ ...generalInfoData, address: e.target.value })}
@@ -920,7 +1083,7 @@ color: '#6d6d6d'}}>General Information.</span>
                 value={generalInfoData.documentType} 
                 className="prfields" 
                 required 
-                style={{ width: '25ch', backgroundColor: 'white' }} 
+                style={{ width: '25ch', backgroundColor: pageEditable?'white':'aliceblue' }} 
                 label='Document Type' 
                 variant="outlined"
                 onChange={(e) => setgeneralInfoData({ ...generalInfoData, documentType: e.target.value })}
@@ -933,7 +1096,7 @@ color: '#6d6d6d'}}>General Information.</span>
                 value={generalInfoData.salesOrg} 
                 className="prfields" 
                 required 
-                style={{ width: '25ch', backgroundColor: 'white' }} 
+                style={{ width: '25ch', backgroundColor:  pageEditable?'white':'aliceblue' }} 
                 label='Sales Org.' 
                 variant="outlined"
                 onChange={(e) => setgeneralInfoData({ ...generalInfoData, salesOrg: e.target.value })}
@@ -946,7 +1109,7 @@ color: '#6d6d6d'}}>General Information.</span>
                 value={generalInfoData.distributionChannel} 
                 className="prfields" 
                 required 
-                style={{ width: '25ch', backgroundColor: 'white' }} 
+                style={{ width: '25ch', backgroundColor:  pageEditable?'white':'aliceblue' }} 
                 label='Distribution Channel' 
                 variant="outlined"
                 onChange={(e) => setgeneralInfoData({ ...generalInfoData, distributionChannel: e.target.value })}
@@ -959,7 +1122,7 @@ color: '#6d6d6d'}}>General Information.</span>
                 value={generalInfoData.division} 
                 className="prfields" 
                 required 
-                style={{ width: '25ch', backgroundColor: 'white' }} 
+                style={{ width: '25ch', backgroundColor:  pageEditable?'white':'aliceblue' }} 
                 label='Division' 
                 variant="outlined"
                 onChange={(e) => setgeneralInfoData({ ...generalInfoData, division: e.target.value })}
@@ -1054,6 +1217,7 @@ color: '#6d6d6d'}}>List of Items.</span>
         key={refreshKey}
         onSelectionModelChange={(params) => setSelectedRows(params)}
        rows={rows}
+      
        columns={columns}
        style={{ maxHeight: '550px', width: '100%',overflowY:'scroll',scrollbarWidth: 'thin',
         scrollbarColor: '#e5c100 #d6d6d6' }}
@@ -1414,7 +1578,8 @@ Close
   backdropFilter: 'blur(3px)'}} onClick={closeDialog}></div>
 )}
 
-<div className="footertab" style={ {  
+<div  className="footertab" style={ {  
+    
     padding: '15px',
     zIndex: '1',
     position: 'fixed',
@@ -1422,7 +1587,7 @@ Close
     bottom: '7vh',
     left: '50%',
     transform: 'translateX(-50%)',
-    display: 'flex',
+    display:pageState=='In Process'?'none':'flex',
     placeContent: 'end'}}>
    {updated ? (
 <button className="footerbarbutton" style={{   display: 'flex', padding: '10px' ,
@@ -1431,10 +1596,11 @@ Close
     backgroundColor: '#9583c6bd',
     boxShadow: '0px 3px 8px rgb(0 0 0 / 66%)',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-    }}> <Icon path={mdiSendOutline} size={1} color='white'></Icon> <span style={{    fontFamily: 'auto',
+    }}> <Icon path={pageState=='Draft'?mdiSendOutline:mdiForumOutline} size={1} color='white'></Icon> <span style={{    fontFamily: 'auto',
     fontSize: 'x-large',
     color: 'white',
-    marginLeft: '10px'}}>Request Quotation</span></button>
+    marginLeft: '10px'}}>{pageState=='Draft'?'Request Quotation':'Negotiate'}  </span></button>
+    
    ): (<div style={{display:'flex',flexDirection:'row',gap:'10px'}}>
     <button className="footerbarbutton" style={{   display: 'flex', padding: '10px' ,
     borderRadius: '10px',

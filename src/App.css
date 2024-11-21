@@ -9,7 +9,7 @@ align-content: center;
 
 }
 .footertab {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s ease, border-bottom-style 0.9s ease;
   border-radius: 20px;
   backdrop-filter: blur(2px);
   background-color: #6950afb5;
@@ -25,8 +25,9 @@ align-content: center;
   transform: scale(1.04);
 }
 .footertab:hover {
-  box-shadow: rgb(255 177 0) 0px 0px 10px;
-  transform: translateX(-50%) scale(1.04) !important; 
+  /* box-shadow: rgb(173 104 0 / 78%) 0px 3px 10px; */
+  border-bottom-style: double;
+  transform: translateX(-50%) scale(1.01) !important; 
 }
 .objPageStatus {
   width: auto; /* Adjust as necessary */
@@ -126,10 +127,11 @@ box-shadow:  0 8px 16px rgba(0, 0, 0, 0.2);
 .prSection{
   box-shadow: rgb(31, 31, 31) 0px 0px 15px;
   transition: 0.2s transform,0.2s box-shadow;
+  
 }
 .prSection:hover{
-transform: scale(1.03);
-box-shadow: rgb(173 104 0) 0px 0px 15px;
+transform: scale(1.006);
+box-shadow: rgb(173 104 0 / 78%) 0px 0px 15px;
 }
 .prtab{
   border-radius: 10px;

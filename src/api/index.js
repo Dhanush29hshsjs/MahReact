@@ -51,7 +51,107 @@ export const getVehiclesInventory = async ()=>{
   const data = await instance.get(url);
   return data.value || data;
   };
-  export const getRequestVehiclesByPurchaseEnquiryUuid = async (purchaseEnquiryUuid)=>{
+  export const patchGeneralInfo = async (purchaseEnquiryUuid,body)=>{
+    let url =`PurchaseEnquiry(purchaseEnquiryUuid=${purchaseEnquiryUuid},IsActiveEntity=true)`;
+    const data = await instance.patch(url,body);
+    return data.value || data;
+    };
+    // export const deleteAndUpdRequestVehiclesByMaterialCode = async (initialRows,deletedRows,updatedRows,pageId)=>{
+    //   try {
+    //     if(deletedRows.length){
+    //       let deletedIds = initialRows.filter((initRow)=>deletedRows.some((delRow)=>delRow.vehicleCode == initRow.vehicleCode));
+    //       deletedRows.forEach(async (row)=>{
+    //         let url =`EnquiryVehicle(vehicleId=${row.uuid},IsActiveEntity=true)`  
+    //         let delRes = await instance.delete(url);
+    //         console.log(delRes);
+    //       })
+    //     }
+    //     if(updatedRows.length){
+    //       let updatedIds = initialRows.filter((initRow)=>updatedRows.some((delRow)=>delRow.vehicleCode == initRow.vehicleCode));
+    //       updatedIds.forEach(async (row)=>{
+    //         let url =`PurchaseEnquiry(purchaseEnquiryUuid=${pageId},IsActiveEntity=true)/enquiryToVehicle(vehicleId=${row.uuid},IsActiveEntity=true)`
+    //         let updatedData = updatedRows.filter((updRow)=>updRow.vehicleCode == row.vehicleCode)  ;
+    //         let body = {quantity:updatedData[0].quantity}
+    //         let updRes = await instance.patch(url,body);
+    //         console.log(updRes);
+    //       })
+          
+    //     }
+    //   } catch (error) {
+        
+    //   }
+    //   // let url =`PurchaseEnquiry(purchaseEnquiryUuid=${purchaseEnquiryUuid},IsActiveEntity=true)`;
+    //   // const data = await instance.patch(url,body);
+    //   // return data.value || data;
+    //   };
+    export const deleteAndUpdRequestVehiclesByMaterialCode = async (initialRows, deletedRows, updatedRows, pageId) => {
+      try {
+        if (deletedRows.length) {
+          let deletedIds = initialRows.filter((initRow) =>
+            deletedRows.some((delRow) => delRow.vehicleCode == initRow.vehicleCode)
+          );
+    
+          for (let i = 0; i < deletedIds.length; i++) {
+            let row = deletedIds[i];
+            let url = `EnquiryVehicle(vehicleId=${row.uuid},IsActiveEntity=true)`;
+            let delRes = await instance.delete(url);
+            console.log(delRes);
+          }
+        }
+    
+        if (updatedRows.length) {
+          let updatedIds = initialRows.filter((initRow) =>
+            updatedRows.some((updRow) => updRow.vehicleCode == initRow.vehicleCode)
+          );
+    
+          for (let i = 0; i < updatedIds.length; i++) {
+            let row = updatedIds[i];
+            let url = `PurchaseEnquiry(purchaseEnquiryUuid=${pageId},IsActiveEntity=true)/enquiryToVehicle(vehicleId=${row.uuid},IsActiveEntity=true)`;
+            let updatedData = updatedRows.filter((updRow) => updRow.vehicleCode == row.vehicleCode);
+            let body = { quantity: updatedData[0].quantity };
+            let updRes = await instance.patch(url, body);
+            console.log(updRes);
+          }
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    
+    // export const postRequestVehiclesByMaterialCode = async (vehicles,pageId)=>{
+    //     try {
+    //       if(vehicles.length){
+    //       let url=`PurchaseEnquiry(purchaseEnquiryUuid=${pageId},IsActiveEntity=true)/enquiryToVehicle`;
+    //       vehicles.forEach(async (vehicle)=>{
+    //         let body = {materialCode:vehicle.vehicleCode,quantity:vehicle.quantity,IsActiveEntity:true};
+    //         let postRes= await instance.post(url,body);
+    //         console.log(postRes);
+    //       })}
+    //     } catch (error) {
+          
+    //     }
+    //     // let url =`PurchaseEnquiry(purchaseEnquiryUuid=${purchaseEnquiryUuid},IsActiveEntity=true)`;
+    //     // const data = await instance.patch(url,body);
+    //     // return data.value || data;
+    //     };
+    export const postRequestVehiclesByMaterialCode = async (vehicles, pageId) => {
+      try {
+        if (vehicles.length) {
+          let url = `PurchaseEnquiry(purchaseEnquiryUuid=${pageId},IsActiveEntity=true)/enquiryToVehicle`;
+    
+          for (let i = 0; i < vehicles.length; i++) {
+            let vehicle = vehicles[i];
+            let body = { materialCode: vehicle.vehicleCode, quantity: vehicle.quantity, IsActiveEntity: true };
+            let postRes = await instance.post(url, body);
+            console.log(postRes);
+          }
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    
+    export const getRequestVehiclesByPurchaseEnquiryUuid = async (purchaseEnquiryUuid)=>{
     let url =`EnquiryVehicle?$filter=purchaseEnquiryUuid eq ${purchaseEnquiryUuid}`;
     const data = await instance.get(url);
     return data.value || data;
