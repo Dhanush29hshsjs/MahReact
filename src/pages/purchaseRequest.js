@@ -1,5 +1,5 @@
 // // Orders.js
-import { AppBar, Hidden, IconButton, MenuItem, Paper, Select, Tab, Table, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField } from "@material-ui/core";
+import { AppBar, Button, Hidden, IconButton, MenuItem, Paper, Select, Tab, Table, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField } from "@material-ui/core";
 import {
   mdiListBoxOutline,
   mdiFile,
@@ -31,7 +31,7 @@ import mahLogo from "../mahindra-logo-new.webp";
 import { DataGrid, renderEditInputCell, renderEditSingleSelectCell } from "@material-ui/data-grid";
 import { VerticalTimeline, VerticalTimelineElement } from "react-vertical-timeline-component";
 import { useNavigate } from "react-router-dom";
-import { getPurchaseRequestsByCustomerId } from "../api";
+import { getPurchaseRequestsByCustomerId, postPurchaseReq } from "../api";
 import { SpinnerCircularSplit } from "spinners-react";
 
 // import { color } from "@mui/system";
@@ -164,9 +164,11 @@ const Orders = () => {
     );
   };
   const InProcAndQuotecolumns = [
-    { field: "id", headerName: "ID", width: 150 },
+    { field: "id", headerName: "ID", width: 150,hide:true },
     { field: "purchaseEnquiryUuid",hide:true},
-    { minWidth: 250, field: "purchaseEnquiryId", headerName: "Purchase Inquiry", flex: 1 },
+    { minWidth: 250, field: "purchaseEnquiryId", 
+       sortComparator: (v1, v2) => parseInt(v1, 10) - parseInt(v2, 10),
+       headerName: "Purchase Inquiry", flex: 1 },
     { minWidth: 250, field: "docType", headerName: "Document Type", flex: 1, editable: true, renderEditCell: (params) => <EditDropdownCell {...params} /> },
     { minWidth: 250, field: "salesOrg", headerName: "Sales Organisation", flex: 1, editable: true },
     { minWidth: 250, field: "distributionChannels", headerName: "Distribution Channels", flex: 1 },
@@ -194,7 +196,8 @@ const Orders = () => {
     },
   ];
   const columns = [
-    { field: "id", headerName: "ID", width: 150 },
+    { field: "id", headerName: "ID",hide:true, width: 150 },
+    { field: "purchaseEnquiryUuid",hide:true},
     { minWidth: 250, field: "docType", headerName: "Document Type", flex: 1, editable: true, renderEditCell: (params) => <EditDropdownCell {...params} /> },
     { minWidth: 250, field: "salesOrg", headerName: "Sales Organisation", flex: 1, editable: true },
     { minWidth: 250, field: "distributionChannels", headerName: "Distribution Channels", flex: 1 },
@@ -212,7 +215,7 @@ const Orders = () => {
         style={{ position: 'sticky', left: 0, background: 'white', zIndex: 1 }}
           className="stickyCell"
           onClick={() =>
-            navtoObjPage(params.row.ID)}
+            navtoObjPage(params.row.purchaseEnquiryUuid)}
           color="primary"
           aria-label="show row id"
         >
@@ -259,8 +262,14 @@ const Orders = () => {
         inProcessRowsArr.push(newRow);
         });
         setRows(rowsArr);
-        setInProcessRows(inProcessRowsArr);
-        setQuotationsRows(quotationsRowsArr);
+        let sortedinProcessRowsArr=inProcessRowsArr.sort(
+          (a, b) => parseInt(b.purchaseEnquiryId, 10) - parseInt(a.purchaseEnquiryId, 10)
+        );
+        let sortedquotationsRowsArr = quotationsRowsArr.sort(
+          (a, b) => parseInt(b.purchaseEnquiryId, 10) - parseInt(a.purchaseEnquiryId, 10)
+        );
+        setInProcessRows(sortedinProcessRowsArr);
+        setQuotationsRows(sortedquotationsRowsArr);
         setRowsLoader(false);
         setInProcessRowsLoader(false);
         setQuotationsRowsLoader(false);
@@ -330,6 +339,12 @@ fetchPurchaseRequests();
   const handleCellEditCommit = (newRow) =>{
 console.log(newRow);
   }
+  const newPurchaseReq = async ()=>{
+    let res =await postPurchaseReq(sessionStorage.getItem('cId'));
+    if(res.data){
+      navtoObjPage(res.data.purchaseEnquiryUuid);
+    }
+  }
 
   return (
     <div style={{display: 'flex',
@@ -338,8 +353,9 @@ console.log(newRow);
       margin: '0'}}>
       <div
         style={{
-          background: "rgb(211 197 255)",
-          // background: "linear-gradient(135deg, rgb(228 219 255), rgb(156 135 255))",
+          // background: "rgb(211 197 255)",
+          background: "rgb(226 226 255)",
+          
           width: "100%",
           height: "100%",
           zIndex: "-1",
@@ -471,6 +487,18 @@ console.log(newRow);
     fontSize: 'x-large',
     fontFamily: 'auto',
     color: '#6d6d6d'}}>Draft Requests.</span>
+
+    <Button onClick={()=>newPurchaseReq()} className="normalButton" style={{borderRadius:'20px',    borderRadius: '20px',
+    marginLeft: 'auto',
+    marginRight: '25vh',
+    marginTop: 'auto',
+    backgroundColor: '#e5c10082'}}><Icon
+                  path={mdiFileDocumentEditOutline}
+                  size={1}
+                  style={{    marginRight: '2vh'                  }}
+                />
+          <span style={{ 
+    color: '#6d6d6d'}}>New Request.</span></Button>
             </div>
             {rowsLoader?(
               <SpinnerCircularSplit
@@ -498,7 +526,10 @@ console.log(newRow);
     <DataGrid
            rows={rows}
            columns={columns}
-           initialState={{ pinnedColumns: { left: ['Actions'] } }}
+           initialState={{ pinnedColumns: { left: ['Actions'] },
+             sorting: {
+            sortModel: [{ field: "createdAt", sort: "desc" }],
+          }, }}
            pageSize={30}
            style={{ maxHeight: '550px', width: '100%',overflowY:'scroll',scrollbarWidth: 'thin',
             scrollbarColor: '#e5c100 #d6d6d6' }}
@@ -598,6 +629,7 @@ console.log(newRow);
     <DataGrid
            rows={inProcessRows}
            columns={InProcAndQuotecolumns}
+          
            style={{ maxHeight: '550px', width: '100%',overflowY:'scroll',scrollbarWidth: 'thin',
             scrollbarColor: '#e5c100 #d6d6d6' }}
                   autoHeight
@@ -688,6 +720,7 @@ console.log(newRow);
     <DataGrid
            rows={quotationsRows}
            columns={InProcAndQuotecolumns}
+          
            style={{ maxHeight: '550px', width: '100%',overflowY:'scroll',scrollbarWidth: 'thin',
             scrollbarColor: '#e5c100 #d6d6d6' }}
                   autoHeight

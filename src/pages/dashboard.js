@@ -52,7 +52,7 @@ import {
 
 const Dashboard = () => {
   const email = "Pradeep@gmail.com";
-  const password = "11111";
+  const password = "12345";
   sessionStorage.setItem('pass', password);
   
 
@@ -89,7 +89,7 @@ const Dashboard = () => {
         // setnotificationsLoader(true);
         const data = await getNotificationsByCustomerId(userInfo.customerId,30);
         data.data.value.forEach((notification) => {
-          switch (notification.commentsText.substring(11)) {
+          switch (notification.commentsText.substring(13)) {
             case "Negotiated Quotation":
               notification.icon = mdiTextBoxEditOutline;
               break;

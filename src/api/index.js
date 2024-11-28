@@ -108,7 +108,7 @@ export const getVehiclesInventory = async ()=>{
             let row = updatedIds[i];
             let url = `PurchaseEnquiry(purchaseEnquiryUuid=${pageId},IsActiveEntity=true)/enquiryToVehicle(vehicleId=${row.uuid},IsActiveEntity=true)`;
             let updatedData = updatedRows.filter((updRow) => updRow.vehicleCode == row.vehicleCode);
-            let body = { quantity: updatedData[0].quantity };
+            let body = { quantity: updatedData[0].quantity ,partnerRole: updatedData[0].partnerRole,partnerNumber: updatedData[0].partnerNumber,discount:updatedData[0].discountpertype? updatedData[0].discount+"%":updatedData[0].discount,discountedPrice:updatedData[0].discountedPrice,totalPrice:updatedData[0].totalPrice};
             let updRes = await instance.patch(url, body);
             console.log(updRes);
           }
@@ -141,7 +141,7 @@ export const getVehiclesInventory = async ()=>{
     
           for (let i = 0; i < vehicles.length; i++) {
             let vehicle = vehicles[i];
-            let body = { materialCode: vehicle.vehicleCode, quantity: vehicle.quantity, IsActiveEntity: true };
+            let body = { materialCode: vehicle.vehicleCode, quantity: vehicle.quantity,partnerRole:vehicle.partnerRole,partnerNumber:vehicle.partnerNumber, IsActiveEntity: true };
             let postRes = await instance.post(url, body);
             console.log(postRes);
           }
@@ -150,12 +150,32 @@ export const getVehiclesInventory = async ()=>{
         console.error(error);
       }
     };
-    
+    export const deletePurchaseRequestByUUID = async (pageId)=>{
+      let url =`PurchaseEnquiry(purchaseEnquiryUuid=${pageId},IsActiveEntity=true)`;
+      const data = await instance.delete(url);
+      return data.value || data;
+      };    
     export const getRequestVehiclesByPurchaseEnquiryUuid = async (purchaseEnquiryUuid)=>{
     let url =`EnquiryVehicle?$filter=purchaseEnquiryUuid eq ${purchaseEnquiryUuid}`;
     const data = await instance.get(url);
     return data.value || data;
     };
+    export const postPurchaseReq = async (customerId)=>{
+      let url =`PurchaseEnquiry`;
+      let body ={customerId:customerId,IsActiveEntity:true};
+      const res = await instance.post(url,body);
+      return res.value || res;
+      };
+      export const getSh = async (field)=>{
+        let url =`SH?$filter=sHField eq '${field}'`;
+        const res = await instance.get(url);
+        return res.value || res;
+        };
+    export const getCommentsByPurchaseEnquiryUuid = async (purchaseEnquiryUuid)=>{
+      let url =`EnquiryComments?$filter=(purchaseEnquiryUuid eq ${purchaseEnquiryUuid} and customerId eq null)&$orderby=createdAt`;
+      const data = await instance.get(url);
+      return data.value || data;
+      };
 export const getPurchaseOrdersByCustomerId = async (customerId,top)=>{
   var url;
 if (top == 0)

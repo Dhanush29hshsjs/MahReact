@@ -37,6 +37,7 @@ align-content: center;
   visibility: hidden;
 }
 .objPageAppbar{
+  
   transition: margin-bottom 0.5s ease; /* Smooth transition */
 }
 .objPageAppbar:hover{
@@ -56,8 +57,9 @@ align-content: center;
     color: darkslategray;
     font-family: none;
 }
+
 .normalButton:hover{
-  transform: scale(1.2);
+  transform: scale(1.05);
   box-shadow: rgb(94, 94, 94) 0px 0px 5px;
 }
 .dragbox {
@@ -125,7 +127,8 @@ box-shadow:  0 8px 16px rgba(0, 0, 0, 0.2);
   border-radius: inherit;
 }
 .prSection{
-  box-shadow: rgb(31, 31, 31) 0px 0px 15px;
+  /* box-shadow: rgb(31, 31, 31) 0px 0px 15px; */
+  box-shadow:rgb(91 72 145) 0px 0px 15px;;
   transition: 0.2s transform,0.2s box-shadow;
   
 }
@@ -730,6 +733,14 @@ h2 {
 color: purple !important;
 scale: 1.2;
 }
+.userProfileIconHBar1{
+  color: #e5c100;
+  transition: scale 0.3s;
+}
+.userProfileIconHBar1:hover{
+  color: rgb(255 109 109) !important;
+scale: 1.2;
+}
 .userProfileIconHBar{
   color: purple;
   transition: scale 0.3s;
@@ -762,4 +773,17 @@ scale: 1.2;
   flex-direction: row;
   align-items: center;
   backdrop-filter: blur(10px);
+}
+.bandSection{
+  height: 100%;
+  width: 90%;
+  justify-self: center;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  
+    border: 0.2rem solid #f1f1f1;
+    
+    overflow: hidden;
 }

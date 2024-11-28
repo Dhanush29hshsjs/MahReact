@@ -1,8 +1,5 @@
-import { AppBar, Button, Grid, IconButton, MenuItem, Paper, Select, Tab, Table, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField } from "@material-ui/core";
+import { AppBar, Button, Grid, IconButton, Input, MenuItem, Paper, Select, Tab, Table, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField } from "@material-ui/core";
 import _ from 'lodash';
-import $ from 'jquery';
-// import AddIcon from "@mui/icons-material/Add";
-// import RemoveIcon from "@mui/icons-material/Remove";
 import {
   mdiListBoxOutline,
   mdiFile,
@@ -33,6 +30,7 @@ import {
   mdiForumOutline,
   mdiMinus,
   mdiPlus,
+  mdiDeleteForeverOutline,
 } from "@mdi/js";
 import 'react-vertical-timeline-component/style.min.css';
 import Icon from "@mdi/react";
@@ -45,7 +43,8 @@ import { DataGrid, renderEditInputCell, renderEditSingleSelectCell } from "@mate
 import { VerticalTimeline, VerticalTimelineElement } from "react-vertical-timeline-component";
 import { useNavigate, useParams } from "react-router-dom";
 import { SpinnerCircularSplit, SpinnerDiamond, SpinnerInfinity, SpinnerRomb } from "spinners-react";
-import { deleteAndUpdRequestVehiclesByMaterialCode, deleteFiles, deleteRequestVehiclesByMaterialCode, getFilesByPurchaseId, getFilesByUrl, getPurchaseRequestsByCustomerId, getPurchaseRequestsByUUID, getRequestVehiclesByPurchaseEnquiryUuid, getUserById, getVehiclesInventory, patchGeneralInfo, postFilesPurchaseReq, postRequestVehiclesByMaterialCode } from "../api";
+import { deleteAndUpdRequestVehiclesByMaterialCode, deleteFiles, deletePurchaseRequestByUUID, deleteRequestVehiclesByMaterialCode, getCommentsByPurchaseEnquiryUuid, getFilesByPurchaseId, getFilesByUrl, getPurchaseRequestsByCustomerId, getPurchaseRequestsByUUID, getRequestVehiclesByPurchaseEnquiryUuid, getSh, getUserById, getVehiclesInventory, patchGeneralInfo, postFilesPurchaseReq, postRequestVehiclesByMaterialCode } from "../api";
+
 
 
 
@@ -58,6 +57,7 @@ var generalInfoInitialData ={};
 var commentsInitial ='';
 const PrObjectPage = ()=>{
 //    const initialUpdated = true;
+// const [refreshKey, setRefreshKey] = useState(0);
 const[generalInfoLoader,setGeneralInfoLoader]=useState(true);
 const[vehiclesLoader,setVehiclesLoader]=useState(true);
 const[attachmentsLoader,setAttachmentsLoader]=useState(true);
@@ -66,8 +66,21 @@ const [updated,setUpdated]=useState(true);
 const [vehiclesSh,setVehiclesSh]=useState([]);
 const [vehiclesShSelectedRows,setVehiclesShSelectedRows]=useState([]);
 const [vehiclesShDialog,setVehiclesShDialog]=useState(false);
+
+const [partnersSh,setPartnersSh]=useState([]);
+const [partnersShDialog,setPartnersShDialog]=useState(false);
+const [partnersSelectedRow,setPartnersSelectedRow]=useState(null);
+
+const [commonShSelected,setCommonShSelected]=useState(null);
+const [commonShSelectedField,setCommonShSelectedField]=useState(null);
+const [commonShDialog,setCommonShDialog]=useState(false);
+const [docTypeSh,setDocTypeSh]=useState([]);
+const [divisionSh,setDivisionSh]=useState([]);
+const [distriChSh,setDistriChSh]=useState([]);
+const [salesOrgSh,setSalesOrgSh]=useState([]);
 const [generalInfoData,setgeneralInfoData] = useState(generalInfoInitialData);
 const [comments,setComments] = useState(commentsInitial);
+const [commentHistory,setCommentHistory] = useState([]);
 const [pageState,setPageState] = useState("");
 
 const handleSelectionChange = (selection) => {
@@ -237,7 +250,7 @@ const handleSelectionChange = (selection) => {
         setPageEditable(true);}
         else if(pr.data.value[0].status == 'In Process'){
           setPageState('Quotation');
-          setPageEditable(true)}
+          setPageEditable(false)}
         else{
         setPageState('In Process');
         setPageEditable(false);  
@@ -249,10 +262,14 @@ const handleSelectionChange = (selection) => {
           "emailAddress": custData.email,
           "van": custData.van,
           "address": custData.address,
+          "purchaseEnquiryId":pr.data.value[0].purchaseEnquiryId,
           "documentType": pr.data.value[0].docType,
           "salesOrg": pr.data.value[0].salesOrg,
           "distributionChannel": pr.data.value[0].distributionChannels,
-          "division": pr.data.value[0].division
+          "division": pr.data.value[0].division,
+          "totalAmount":pr.data.value[0].totalAmount,
+          "taxAmount":pr.data.value[0].taxAmount,
+          "grandTotal":pr.data.value[0].grandTotal,
         };
 
         setgeneralInfoData(generalInfoInitialData);
@@ -264,16 +281,54 @@ const handleSelectionChange = (selection) => {
           vehicleInvDataSh.push(vhData);
         });
         setVehiclesSh(vehicleInvDataSh);
+
+        let partnersData = await getSh('Partners');
+        let salesOrgData = await getSh('Sales Org');
+        let distriChData = await getSh('Distribution Channel');
+        let divisionData = await getSh('Division');
+        let docTypeData = await getSh('Document Type');
+        let partnersDataSh = [], 
+    salesOrgDataSH = [], 
+    distriChDataSH = [], 
+    divisionDataSH = [], 
+    docTypeDataSH = [];
+
+        partnersData.data.value.forEach((element,index) => {
+          let ptData ={id:index,sHKey:element.sHKey,sHField:element.sHField,sHId:element.sHId,sHDescription:element.sHDescription};
+          partnersDataSh.push(ptData);
+        });
+        salesOrgData.data.value.forEach((element,index) => {
+          let ptData ={id:index,sHKey:element.sHKey,sHField:element.sHField,sHId:element.sHId,sHDescription:element.sHDescription};
+          salesOrgDataSH.push(ptData);
+        });
+        distriChData.data.value.forEach((element,index) => {
+          let ptData ={id:index,sHKey:element.sHKey,sHField:element.sHField,sHId:element.sHId,sHDescription:element.sHDescription};
+          distriChDataSH.push(ptData);
+        });
+        divisionData.data.value.forEach((element,index) => {
+          let ptData ={id:index,sHKey:element.sHKey,sHField:element.sHField,sHId:element.sHId,sHDescription:element.sHDescription};
+          divisionDataSH.push(ptData);
+        });
+        docTypeData.data.value.forEach((element,index) => {
+          let ptData ={id:index,sHKey:element.sHKey,sHField:element.sHField,sHId:element.sHId,sHDescription:element.sHDescription};
+          docTypeDataSH.push(ptData);
+        });
+        setPartnersSh(partnersDataSh);setSalesOrgSh(salesOrgDataSH);setDistriChSh(distriChDataSH);setDivisionSh(divisionDataSH);setDocTypeSh(docTypeDataSH);
+
+
         setVehiclesLoader(false);
         commentsInitial =pr.data.value[0].commentsText
         setComments(commentsInitial);
-
-        
+        let commentsHistory = await getCommentsByPurchaseEnquiryUuid(PageId);
+        if(commentsHistory.data.value == null ||commentsHistory.data.value == undefined)
+          commentsHistory.data.value = [];
+        setCommentHistory(commentsHistory.data.value);
+        console.log(commentsHistory.data.value);
       let requestVehicleData = await getRequestVehiclesByPurchaseEnquiryUuid(PageId);
       let initialRowsLet =[];
       console.log(requestVehicleData)
       requestVehicleData.data.value.forEach((vehileData,index)=>{
-        initialRowsLet.push({id:(index+1),vehicleCode:vehileData.materialCode,vehicleName:vehileData.vehicleName,vehicleColor:vehileData.vehicleColor,quantity:vehileData.quantity,uuid:vehileData.vehicleId});
+        initialRowsLet.push({id:(index+1),vehicleCode:vehileData.materialCode,vehicleName:vehileData.vehicleName,vehicleColor:vehileData.vehicleColor,quantity:vehileData.quantity,uuid:vehileData.vehicleId,partnerNumber:vehileData.partnerNumber,partnerRole:vehileData.partnerRole,pricePerUnit:vehileData.pricePerUnit,actualPrice:vehileData.actualPrice,band:vehileData.band,discount:vehileData.discount.replace(/[^0-9.]/g, ""),discountpertype:vehileData.discount.includes('%'),discountedPrice:vehileData.discountedPrice,taxPercentage:vehileData.taxPercentage,totalPrice:vehileData.totalPrice});
       })
       initialRows=initialRowsLet;
     //   initialRows = [
@@ -283,6 +338,8 @@ const handleSelectionChange = (selection) => {
     //    // { id: 4, ID: 'QTN-004', DocType: 'Inquiry', OrderType: 'Standard' ,OrderType1: 'Standard', OrderType2: 'Standard', OrderType3: 'Standard'},
     //    // { id: 5, ID: 'QTN-005', vehicleCode: 'Quotation', OrderType: 'Custom' ,OrderType1: 'Standard', OrderType2: 'Standard', OrderType3: 'Standard'},
     //  ];
+    if(initialRows == null ||initialRows == undefined)
+      initialRows =[];
      setRows(initialRows);
      if(initialRows1.length!=initialRows.length)
       initialRows.forEach((row)=>{
@@ -308,6 +365,8 @@ let initialItemsCopy = [];
     initialItemsCopy.push(obj);
 }
 initialItems = initialItemsCopy;
+if(initialItems == null ||initialItems == undefined)
+  initialItems = [];
               setItems(initialItems);
               setAttachmentsLoader(false);
 
@@ -486,19 +545,156 @@ initialItems = initialItemsCopy;
             );
           }:undefined,
         },
+        { field: "partnerRole", renderCell: (params) =>{
+          const hasError = params.value?false:true;
+          return (
+            <>
+            {pageState == 'Draft'?(  <TextField
+              value={params.value || ""}
+              onClick={()=>handlePartnersShOpen(params.id)}
+              error={hasError}
+              helperText={hasError ? "* Required" : ""}
+              variant="standard"
+              style={{ width: "100%" }}
+            />):(<div>{params.value}</div>)}
+            </>
+          );},  headerName: "Partner Role", flex: 1  ,minWidth: 350 },
+        { field: "partnerNumber", renderCell: (params) =>{
+          const hasError = params.value?false:true;
+          return (
+            <>
+            {pageState == 'Draft'?(
+              <TextField
+                value={params.value || ""}
+                onClick={()=>handlePartnersShOpen(params.id)}
+                error={hasError}
+                helperText={hasError ? "* Required" : ""}
+                variant="standard"
+                style={{ width: "100%" }}
+              />):(<div>{params.value}</div>)}
+              </>
+            // </div>
+          );}, headerName: "Partner Number", flex: 1  ,minWidth: 350 },
+
+
+          {hide:pageState == 'Quotation'?false:true, field: "pricePerUnit", headerName: "Price per Unit.", flex: 1  ,minWidth: 350 },
+          {hide:pageState == 'Quotation'?false:true, field: "actualPrice", headerName: "Actual Price", flex: 1  ,minWidth: 350 },
+          {hide:pageState == 'Quotation'?false:true, field: "band", headerName: "Band Applied", flex: 1  ,minWidth: 350 },
+          {hide:pageState == 'Quotation'?false:true, field: "discount", headerName: "Discount % / price", flex: 1  ,minWidth: 350 ,renderCell:(params)=>(<><TextField  onChange={(e)=>{
+           if(e.target.value.trim() == "")
+            e.target.value ='0';
+           if(e.target.value.includes("-"))
+            return
+            let row = rows.find((row)=>row.id == params.row.id);
+           let bandper =  parseFloat(row.band.match(/\((.+?)%\)/)[1]).toFixed(2);
+           let actualPrice = parseFloat(row.actualPrice);
+            if(row.discountpertype){
+              var discountedprice = (actualPrice - (actualPrice * ((parseFloat(bandper)+parseFloat(parseFloat(e.target.value).toFixed(2))) / 100)));
+              if(discountedprice < 1)
+                return
+              var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
+            }else{
+              var discountedprice = (actualPrice - (actualPrice * (parseFloat(bandper)/ 100)))-e.target.value;
+              if(discountedprice < 1)
+                return
+              var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
+            }
+            if(e.target.value =='0')
+              e.target.value =''
+            setRows((prevRows) =>
+              prevRows.map((row) =>
+                row.id === params.row.id ? { ...row, discount: e.target.value,discountedPrice:discountedprice.toString(),totalPrice:totalprice.toString() } : row
+              )
+            );
+          }} value={params.value}></TextField> <div style={{margin:'auto'}}><input  id={params.id}
+           onChange={()=>{console.log("hi",params.id)
+            setRows((prevRows) =>
+              prevRows.map((row) =>
+                row.id === params.id ? { ...row,discountpertype:!row.discountpertype} : row
+              )
+            );
+
+
+
+            let row = rows.find((row)=>row.id == params.id);
+            if(row.discount.trim() == "")
+              row.discount ='0';
+             if(row.discount.includes("-"))
+              return
+             
+             let bandper =  parseFloat(row.band.match(/\((.+?)%\)/)[1]).toFixed(2);
+             let actualPrice = parseFloat(row.actualPrice);
+              if(!row.discountpertype){
+                var discountedprice = (actualPrice - (actualPrice * ((parseFloat(bandper)+parseFloat(parseFloat(row.discount).toFixed(2))) / 100)));
+                if(discountedprice < 1){
+                  row.discount='0'
+                  var discountedprice = (actualPrice - (actualPrice * ((parseFloat(bandper)+parseFloat(parseFloat(row.discount).toFixed(2))) / 100)));
+                  var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
+                   if(row.discount =='0')
+                row.discount =''
+                  setRows((prevRows) =>
+                    prevRows.map((row) =>
+                      row.id === params.row.id ? { ...row, discount: '',discountedPrice:discountedprice.toString(),totalPrice:totalprice.toString() } : row
+                    )
+                  );
+                  return
+                }
+                var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
+              }else{
+                var discountedprice = (actualPrice - (actualPrice * (parseFloat(bandper)/ 100)))-parseFloat(row.discount);
+                if(discountedprice < 1){
+                  row.discount='0'
+                  var discountedprice = (actualPrice - (actualPrice * ((parseFloat(bandper)+parseFloat(parseFloat(row.discount).toFixed(2))) / 100)));
+                  var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
+                  if(row.discount =='0')
+                row.discount =''
+                  setRows((prevRows) =>
+                    prevRows.map((row) =>
+                      row.id === params.row.id ? { ...row, discount: '',discountedPrice:discountedprice.toString(),totalPrice:totalprice.toString() } : row
+                    )
+                  );
+                return
+                }
+                var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
+              }
+              if(row.discount =='0')
+                row.discount =''
+              setRows((prevRows) =>
+                prevRows.map((row) =>
+                  row.id === params.row.id ? { ...row, discount: row.discount.toString(),discountedPrice:discountedprice.toString(),totalPrice:totalprice.toString() } : row
+                )
+              );
+
+          }}
+           checked={ rows.find((row)=>row.id == params.id).discountpertype} type="checkbox"/>%</div></>)},
+          {hide:pageState == 'Quotation'?false:true, field: "discountedPrice", headerName: "Discounted Price", flex: 1  ,minWidth: 350 },
+          {hide:pageState == 'Quotation'?false:true, field: "taxPercentage", headerName: "Tax", flex: 1  ,minWidth: 350 },
+          {hide:pageState == 'Quotation'?false:true, field: "totalPrice", headerName: "Total Price", flex: 1  ,minWidth: 350 },
       ];
       const columnsVehicleSh = [
         { field: "vehicleCode", headerName: "Vehicle Code", flex: 1  },
         { field: "vehicleName", headerName: "Vehicle Name", flex: 1  },
         { field: "vehicleColor", headerName: "Vehicle Color", flex: 1  }
       ];
+      const columnsCommonSh = [
+        { field: "sHKey",hide:true, headerName: "Vehicle Code", flex: 1  },
+        { field: "sHField",hide:true, headerName: "Vehicle Name", flex: 1  },
+        { field: "sHId", headerName: "Code", flex: 1  },
+        { field: "sHDescription", headerName: "Name", flex: 1  },
+      ];
+      const columnsPartnersSh = [
+        { field: "sHKey",hide:true, headerName: "Vehicle Code", flex: 1  },
+        { field: "sHField",hide:true, headerName: "Vehicle Name", flex: 1  },
+        { field: "sHId", headerName: "Role", flex: 1  },
+        { field: "sHDescription", headerName: "Number", flex: 1  },
+      ];
      
       const handeSave = async () =>{
         setAttachmentsLoader(true);
-        if(!_.isEqual(generalInfoData, generalInfoInitialData)){
+        if(!_.isEqual(generalInfoData, generalInfoInitialData) || !_.isEqual(comments, commentsInitial)){
           setGeneralInfoLoader(true);
           try {
-            let body={contactPerson:generalInfoData.contactPerson,distributionChannels:generalInfoData.distributionChannel,division:generalInfoData.division,docType:generalInfoData.documentType,salesOrg:generalInfoData.salesOrg}
+            let body={contactPerson:generalInfoData.contactPerson,distributionChannels:generalInfoData.distributionChannel,division:generalInfoData.division,docType:generalInfoData.documentType,salesOrg:generalInfoData.salesOrg,commentsText:comments,totalAmount:generalInfoData.totalAmount,taxAmount:generalInfoData.taxAmount,grandTotal:generalInfoData.grandTotal}
             let res=await patchGeneralInfo(PageId,body);
             console.log(res);
             let pr = await getPurchaseRequestsByUUID(PageId);
@@ -513,10 +709,17 @@ initialItems = initialItemsCopy;
               "documentType": pr.data.value[0].docType,
               "salesOrg": pr.data.value[0].salesOrg,
               "distributionChannel": pr.data.value[0].distributionChannels,
-              "division": pr.data.value[0].division
+              "division": pr.data.value[0].division,
+              "totalAmount":pr.data.value[0].totalAmount,
+          "taxAmount":pr.data.value[0].taxAmount,
+          "grandTotal":pr.data.value[0].grandTotal,
             };
     
             setgeneralInfoData(generalInfoInitialData);
+            
+            commentsInitial =pr.data.value[0].commentsText
+        setComments(commentsInitial);
+        
             setGeneralInfoLoader(false);
           } catch (error) {
               console.error("Failed to updategeneralInfo:", error);
@@ -532,7 +735,7 @@ initialItems = initialItemsCopy;
               // let updatedRows = rows.filter((row)=>initialRows.some((iRow)=>iRow.vehicleCode== row.vehicleCode ));
               let updatedRows = rows.filter((row) => 
                 initialRows1.some((iRow) => 
-                  (iRow.vehicleCode == row.vehicleCode && iRow.quantity != row.quantity)
+                  (iRow.vehicleCode == row.vehicleCode && (iRow.quantity != row.quantity ||iRow.partnerRole != row.partnerRole ||iRow.partnerNumber != row.partnerNumber||iRow.discount != row.discount||iRow.discountedPrice != row.discountedPrice||iRow.totalPrice != row.totalPrice||iRow.discount != row.discount||iRow.discountpertype != row.discountpertype))
                 )
               );
 
@@ -549,7 +752,7 @@ initialItems = initialItemsCopy;
               let initialRowsLet =[];
               console.log(requestVehicleData)
               requestVehicleData.data.value.forEach((vehileData,index)=>{
-                initialRowsLet.push({id:(index+1),vehicleCode:vehileData.materialCode,vehicleName:vehileData.vehicleName,vehicleColor:vehileData.vehicleColor,quantity:vehileData.quantity,uuid:vehileData.vehicleId});
+                initialRowsLet.push({id:(index+1),vehicleCode:vehileData.materialCode,vehicleName:vehileData.vehicleName,vehicleColor:vehileData.vehicleColor,quantity:vehileData.quantity,uuid:vehileData.vehicleId,partnerNumber:vehileData.partnerNumber,partnerRole:vehileData.partnerRole,pricePerUnit:vehileData.pricePerUnit,actualPrice:vehileData.actualPrice,band:vehileData.band,discount:vehileData.discount.replace(/[^0-9.]/g, ""),discountpertype:vehileData.discount.includes('%'),discountedPrice:vehileData.discountedPrice,taxPercentage:vehileData.taxPercentage,totalPrice:vehileData.totalPrice});
               })
               initialRows=initialRowsLet;
             
@@ -667,39 +870,54 @@ initialItems = initialItemsCopy;
         }
         function resetFilesPr(){
           return new Promise(async (resolve)=>{
-            
-    let FilesData = await getFilesByPurchaseId(PageId);
-    let initialItemsCopy = [];
-    // FilesData.data.value.forEach(async (file,index)=>{
-    
-      for(let i = 0;i<FilesData.data.value.length;i++){
-        console.log(FilesData.data.value[i].id);
-        let fileObj = await getFilesByUrl(`EnquiryFiles/${FilesData.data.value[i].id}/content`);
-        console.log(fileObj);
+           
+    const intervalId = setInterval(async () => {
+      let FilesData = await getFilesByPurchaseId(PageId);
+      let initialItemsCopy = [];
+      // FilesData.data.value.forEach(async (file,index)=>{
       
-        let obj = {};
-        obj.id = i + 1; 
-        obj.fileName = FilesData.data.value[i].fileName;
-        obj.mediaType = FilesData.data.value[i].mediaType;
-        obj.url =  URL.createObjectURL(fileObj);
-        obj.oId = FilesData.data.value[i].id;
-        initialItemsCopy.push(obj);
-    }
-    initialItems = initialItemsCopy;
-                  setItems(initialItems);
-                  setAttachmentsLoader(false);
-                  resolve();
+        for(let i = 0;i<FilesData.data.value.length;i++){
+          console.log(FilesData.data.value[i].id);
+          let fileObj = await getFilesByUrl(`EnquiryFiles/${FilesData.data.value[i].id}/content`);
+          console.log(fileObj);
+        
+          let obj = {};
+          obj.id = i + 1; 
+          obj.fileName = FilesData.data.value[i].fileName;
+          obj.mediaType = FilesData.data.value[i].mediaType;
+          obj.url =  URL.createObjectURL(fileObj);
+          obj.oId = FilesData.data.value[i].id;
+          initialItemsCopy.push(obj);
+      }
+      initialItems = initialItemsCopy;   
+      const currentFileNames = initialItems.map(item => item.fileName);
+      const existingFileNames = items.map(file => file.fileName);
+    
+      // Check if all file names in `currentFileNames` are present in `existingFileNames`
+      const allNamesMatch = currentFileNames.every(name => existingFileNames.includes(name));
+    
+      if (allNamesMatch) {
+        console.log("All file names are present. Stopping interval.");
+        clearInterval(intervalId); // Stop the interval
+        setItems(initialItems); // Update the state
+        setAttachmentsLoader(false); // Turn off loader if applicable
+        resolve();
+      }
+    }, 2000);
+                  // setItems(initialItems);
+                  // setAttachmentsLoader(false);
+                  
           })
         }
 
         // Usage example
-        async function runFunction() {
+        // async function runFunction() {
           await newFilesPr();
           await deleteFilesPr();
           await resetFilesPr();
-        }
+        // }
         
-        runFunction();
+        // runFunction();
         
 
 
@@ -746,9 +964,53 @@ initialItems = initialItemsCopy;
 
       //   setAttachmentsLoader(false);
       }
-      
-      const [refreshKey, setRefreshKey] = useState(0);
+      const requestQuotation = async ()=>{
+        setGeneralInfoLoader(true);
+        setVehiclesLoader(true);
+        setAttachmentsLoader(true);
+        var errString="";
+        if(rows.length == 0)
+          errString+= "\n-> Please select atlesat 1 item to request for quotation";
+        if(rows.some((row)=>(!row.partnerRole ||!row.partnerNumber)))
+          errString+= "\n-> Mandatory fields to be filled in List Of Items";
+          if(items.length == 0)
+            errString+= "\n-> Attachments are mandatory ";
+          if(!comments)
+            errString+= "\n-> Comments are mandatory";
+            if(!generalInfoData.division|| !generalInfoData.distributionChannel||!generalInfoData.salesOrg||!generalInfoData.documentType)
+       errString+= "\n-> some Mandatory fields are missing please make sure to fill them out!!";
+        if(errString != ""){
+          alert(errString);
+          setGeneralInfoLoader(false);
+        setVehiclesLoader(false);
+        setAttachmentsLoader(false);
+        return;
+        }
+            const reqQuotePr = async ()=>{
+          return new Promise(async (resolve)=>{
+            let res = await patchGeneralInfo(PageId,{status:'Create Request'});//deploy
+            if(res){//deploy
+// let pr =async()=> new Promise((resolve)=>{ setTimeout(() => {//testing
+  
+  // resolve();//testing
+// }, 4000);})//testing
+// await pr();//testing
+setPageEditable(false);
+setGeneralInfoLoader(false);
+        setVehiclesLoader(false);
+        setAttachmentsLoader(false);
+            setPageState("In Process");
+            resolve();//deploy
+          }//deploy
+          })
+        }
 
+       reqQuotePr();
+       setRefreshKey1((prevKey) => prevKey + 1);
+      // window.location.reload();
+      };
+      const [refreshKey, setRefreshKey] = useState(0);
+      const [refreshKey1, setRefreshKey1] = useState(0);
       const refreshElementById = () => {
         setRefreshKey(prevKey => prevKey + 1); // Increment the key to force re-render
       };
@@ -803,12 +1065,32 @@ initialItems = initialItemsCopy;
         }
     }
     useEffect(() => {
+      if(rows){
+        let totalPrice=0;
+        let grandTotal=0;
+        rows.forEach((row)=>{
+          totalPrice += parseFloat(parseFloat(row.discountedPrice).toFixed(2));
+          grandTotal += parseFloat(parseFloat(row.totalPrice).toFixed(2));
+        });
+        let taxamt = parseFloat(parseFloat(grandTotal-totalPrice).toFixed(2));
+        setgeneralInfoData((prev) => ({
+          ...prev,
+          totalAmount: totalPrice.toString(),
+          taxAmount: taxamt.toString(),
+          grandTotal: grandTotal.toString(),
+        }));
+      }
+    },[rows])
+    useEffect(() => {
         // Example logic to update `updated` based on some conditions
         if (_.isEqual(comments, commentsInitial) && _.isEqual(generalInfoData, generalInfoInitialData) &&  _.isEqual(rows, initialRows) &&  _.isEqual(items, initialItems) ) {
           setUpdated(true);
         }else{
             setUpdated(false);
-        }
+            console.log(_.isEqual(comments, commentsInitial) , _.isEqual(generalInfoData, generalInfoInitialData) ,  _.isEqual(rows, initialRows) ,  _.isEqual(items, initialItems) )
+          console.log(generalInfoData,generalInfoInitialData)
+          }
+        
       }, [generalInfoData , rows ,items,comments]);
     const openDialog = () => {
         setIsDialogOpen(true);
@@ -817,15 +1099,60 @@ initialItems = initialItemsCopy;
       const closeDialog = () => {
         setIsDialogOpen(false);
       };
+      const addPartner = async(params)=>{
+        setRows((prevRows) =>
+          prevRows.map((row) =>
+            row.id === partnersSelectedRow ? { ...row, partnerRole: params.row.sHId,partnerNumber:params.row.sHDescription } : row
+          )
+        );
+        setPartnersSelectedRow(null);
+        setPartnersShDialog(false);
+      }
+      const handlePartnersShOpen = async(params)=>{
+        if(pageState=='Draft'){
+          setPartnersSelectedRow(params);
+        setPartnersShDialog(true);
+        }
+        
+      }
+      const addFieldFromSh = async(params)=>{
+        // setgeneralInfoData({...generalInfoData,documentType:params.row.sHId});
+        setgeneralInfoData((prev) => ({
+          ...prev,
+          [commonShSelectedField]: params.row.sHId,
+        }));
+        setCommonShDialog(false);setCommonShSelected(null);setCommonShSelectedField(null);
+      }
+      const handleCommonShOpen = async(field)=>{
+        if(pageState=='Draft'){
+        setCommonShSelectedField(field);
+        if(field =='documentType' )
+        setCommonShSelected(docTypeSh);
+     else if(field ==  'salesOrg')
+        setCommonShSelected(salesOrgSh);
+     else if(field ==  'distributionChannel' )
+        setCommonShSelected(distriChSh);
+      else if(field == 'division')
+        setCommonShSelected(divisionSh);
+      setCommonShDialog(true);
+}
+      }
+      const getDisplayValue = (doctype,arr)=>{
+        let description = arr.find((obj)=>obj.sHId == doctype);
+        if(description)
+return doctype+" ("+description.sHDescription+")";
+        return ""
+      }
     return (
         <div
     id="firstTab"
-    
+    key={refreshKey1}
     style={{ display: "flex", flexDirection: "column"}}
   >
    <div
         style={{
-          background: "rgb(211 197 255)",
+          // rgb(211, 197, 255)
+          background: "rgb(226 226 255)",
           width: "100%",
           height: "100%",
           zIndex: "-1",
@@ -836,11 +1163,13 @@ initialItems = initialItemsCopy;
       className="objPageAppbar"
         position="static"
         style={{
-            
+
           backgroundColor: "#5b4891",
           boxShadow: "0 1px 10px rgb(5 4 0)",
         }}
       >
+        <div style={{display:'flex',
+flexDirection:'row'}}>
         <span
           style={{
             marginRight: "auto",
@@ -852,8 +1181,34 @@ initialItems = initialItemsCopy;
             marginTop: "10px",
           }}
         >
-          {PageId}
+          {generalInfoData.purchaseEnquiryId}
+          
         </span>
+        {pageState == 'Draft' && (<div style={{ marginTop:'auto',   right: '15vh',
+    position: 'sticky'
+}} onClick={async()=>{
+  setPageEditable(false);
+  setGeneralInfoLoader(true)
+  setVehiclesLoader(true)
+  setAttachmentsLoader(true)
+  let res = await deletePurchaseRequestByUUID(PageId);
+  setGeneralInfoLoader(false)
+  setVehiclesLoader(false)
+  setAttachmentsLoader(false)
+  if(res)
+  window.history.back();}}>
+<Icon
+                  path={mdiDeleteForever}
+                  size={1.5}
+                  // color="white"
+                  className="userProfileIconHBar1"
+                />
+</div>)}
+
+
+</div>
+
+
         <div style={{       height: '20px',     display: 'flex',
     justifyContent: 'center',marginBottom:'20px'}}>
             
@@ -1080,52 +1435,61 @@ color: '#6d6d6d'}}>General Information.</span>
                 InputProps={{
                   readOnly: !pageEditable,
                 }}
-                value={generalInfoData.documentType} 
+                onClick={()=>handleCommonShOpen('documentType')}
+                error={generalInfoData.documentType?false:true}
+                // value={generalInfoData.documentType || ""} 
+                value={getDisplayValue(generalInfoData.documentType,docTypeSh)}
                 className="prfields" 
                 required 
                 style={{ width: '25ch', backgroundColor: pageEditable?'white':'aliceblue' }} 
                 label='Document Type' 
                 variant="outlined"
-                onChange={(e) => setgeneralInfoData({ ...generalInfoData, documentType: e.target.value })}
+                // onChange={(e) => setgeneralInfoData({ ...generalInfoData, documentType: e.target.value })}
               />
         
               <TextField 
                 InputProps={{
                   readOnly: !pageEditable,
                 }}
-                value={generalInfoData.salesOrg} 
+                onClick={()=>handleCommonShOpen('salesOrg')}
+                error={generalInfoData.salesOrg?false:true}
+                value={getDisplayValue(generalInfoData.salesOrg,salesOrgSh)} 
                 className="prfields" 
                 required 
                 style={{ width: '25ch', backgroundColor:  pageEditable?'white':'aliceblue' }} 
                 label='Sales Org.' 
                 variant="outlined"
-                onChange={(e) => setgeneralInfoData({ ...generalInfoData, salesOrg: e.target.value })}
+                // onChange={(e) => setgeneralInfoData({ ...generalInfoData, salesOrg: e.target.value })}
               />
         
               <TextField 
                 InputProps={{
                   readOnly: !pageEditable,
                 }}
-                value={generalInfoData.distributionChannel} 
+                onClick={()=>handleCommonShOpen('distributionChannel')}
+                error={generalInfoData.distributionChannel?false:true}
+                value={getDisplayValue(generalInfoData.distributionChannel,distriChSh)} 
                 className="prfields" 
                 required 
                 style={{ width: '25ch', backgroundColor:  pageEditable?'white':'aliceblue' }} 
                 label='Distribution Channel' 
                 variant="outlined"
-                onChange={(e) => setgeneralInfoData({ ...generalInfoData, distributionChannel: e.target.value })}
+                // onChange={(e) => setgeneralInfoData({ ...generalInfoData, distributionChannel: e.target.value })}
               />
         
               <TextField 
                 InputProps={{
                   readOnly: !pageEditable,
                 }}
-                value={generalInfoData.division} 
+                onClick={()=>handleCommonShOpen('division')}
+                error={generalInfoData.division?false:true}
+                value={getDisplayValue(generalInfoData.division,divisionSh)} 
                 className="prfields" 
                 required 
                 style={{ width: '25ch', backgroundColor:  pageEditable?'white':'aliceblue' }} 
                 label='Division' 
                 variant="outlined"
-                onChange={(e) => setgeneralInfoData({ ...generalInfoData, division: e.target.value })}
+                // onChange={(e) => setgeneralInfoData({ ...generalInfoData, division: e.target.value })}
               />
         
                 </div>
@@ -1209,6 +1573,7 @@ color: '#6d6d6d'}}>List of Items.</span>
             </table> */}
             
 <Paper sx={{ height: '400px', width: '100%' }} id="myDataGrid">
+              
 {vehiclesLoader?(<SpinnerCircularSplit
               style={{ margin: "auto",padding: '30px',  minHeight: '350px' }}
               color="rgb(229 193 0)"
@@ -1242,6 +1607,50 @@ color: '#6d6d6d'}}>List of Items.</span>
   /> */}
 </Paper>
 
+  {pageState == 'Quotation' && <section style={{ 
+    height: '150px',
+    marginTop: '30px',
+    borderRadius: '2px',
+    overflow: 'hidden',
+    padding: '20px',
+    // backgroundColor: '#ffffff',
+    // boxShadow: 'rgb(0 0 0 / 57%) 0px 1px 3px'
+}} > <section className="bandSection" style={{boxShadow:
+    '0 0 10px #FFD700,0 0 2px #F7BC3A,0 0 20px #ffa500,inset 0 0 10px #ffe4b5'//gold
+    // '0 0 12px #C0C0C0, 0 0 4px #B0B0B0, 0 0 18px #8A8A8A, inset 0 0 10px #D3D3D3'//silver
+    // '0 0 15px #E5E4E2, 0 0 6px #F8F8F8, 0 0 25px #B0B0B0, inset 0 0 12px #FFFFFF'//platinum
+    // ' 0 0 12px #5b4891a8, 0 0 5px #6a4d9e, 0 0 20px #8b7ba0, inset 0 0 10px #5b4891a8'//none
+    }}>
+    <div style={{      alignContent: 'center',  justifyItems: 'center', background: 
+      'linear-gradient(to right, #d9b36b, #e9c98a, #e9d4a2, #e9c98a, #d9b36b)',//gold
+      // 'linear-gradient(to right, #C0C0C0, #D8D8D8, #E6E6E6, #D8D8D8, #C0C0C0)',//silver
+      // 'linear-gradient(to right, #E5E4E2, #F8F8F8, #FFFFFF, #F8F8F8, #E5E4E2)',//platinum
+      // ' #5b4891a8',//none
+       height:'30%',   border: '0.2rem solid #f4f4f4'}}>
+      <h4 style={{    marginBottom: 'auto',
+    marginTop: 'auto',    fontFamily: 'auto'}}>PRICING SUMMARY</h4>
+    </div>
+    <div style={{display:'flex',    backgroundColor: 'whitesmoke' ,flexDirection:'row',height:'70%',    placeContent: 'space-evenly'}}>
+     
+     <div style={{display:'flex',flexDirection:'column',    marginBottom: '20px',
+    justifyContent: 'space-evenly',    width: '-webkit-fill-available'}}><span style={{    marginLeft: '20px',fontWeight: 'bolder',fontSize: 'small',color: 'dimgray'}}>TOTAL PRICE</span><span style={{    alignSelf: 'center',fontFamily: 'sans-serif',fontSize: 'larger',fontWeight: 'bold',color: 'darkslategray'}}>{generalInfoData.totalAmount}</span></div> 
+    
+    {/* <div style={{borderLeft: '6px solid green',
+    height: '500px'}}></div> */}
+    <hr></hr>
+   
+    
+    <div  style={{display:'flex',flexDirection:'column',    marginBottom: '20px',
+    justifyContent: 'space-evenly',    width: '-webkit-fill-available'}}><span style={{    marginLeft: '20px',fontWeight: 'bolder',fontSize: 'small',color: 'dimgray'}}>TAX Amount</span><span style={{    alignSelf: 'center',fontFamily: 'sans-serif',fontSize: 'larger',fontWeight: 'bold',color: 'darkslategray'}}>{generalInfoData.taxAmount}</span></div> 
+    
+    <hr></hr>
+    
+    <div  style={{display:'flex',flexDirection:'column',    marginBottom: '20px',
+    justifyContent: 'space-evenly',    width: '-webkit-fill-available'}}><span style={{    marginLeft: '20px',fontWeight: 'bolder',fontSize: 'small',color: 'dimgray'}}>GRAND TOTAL</span><span style={{    alignSelf: 'center',fontFamily: 'sans-serif',fontSize: 'larger',fontWeight: 'bold',color: 'darkslategray'}}>{generalInfoData.grandTotal}</span></div> 
+    </div>
+  </section>
+  </section>}
+  
 
             </div>
       </div>
@@ -1391,10 +1800,13 @@ style={{
 <div style={{ display: 'flex', justifyContent: 'center', flexDirection: 'column', padding: '30px', minHeight: '100px' }}>
 
   <textarea
+  readOnly={!pageEditable}
     placeholder="Write your comment here..."
     value={comments}
+    
     onChange={(e) => setComments(e.target.value )}
     style={{
+      backgroundColor:pageEditable?'white':'aliceblue',
       fontFamily: 'sans-serif',
       width: '100%',
       minHeight: '80px',
@@ -1407,6 +1819,11 @@ style={{
 scrollbarColor: '#e5c100 #d6d6d6'
     }}
   ></textarea>
+{(!comments || comments.trim() === "") && (
+  <div style={{ color: 'red', fontSize: '14px', marginTop: '5px' }}>
+    * This field is required.
+  </div>
+)}
   
 </div>
 </div>
@@ -1460,8 +1877,58 @@ icon={<Icon path={mdiRobotExcited} size={1}></Icon>}
 <h3 className="vertical-timeline-element-title">ChatBox</h3>
 <p>Welcome! Feel free to ask questions or add comments below.</p>
 </VerticalTimelineElement>
+
+{commentHistory.map((comment) => (
+  <VerticalTimelineElement
+    key={comment.commentId}
+    className={
+      comment.user === 'C'
+        ? 'vertical-timeline-element--message'
+        : 'vertical-timeline-element--replier'
+    }
+    position={comment.user === 'C' ? 'right' : 'left'} // Positioning dynamically
+    contentStyle={{
+      overflowWrap: 'break-word',
+      color: 'rgb(0, 0, 0)',
+      borderStyle: 'double',
+      borderRadius: '10px',
+      borderColor: comment.user === 'C' ? '#248b76' : '#fc7f00',
+      boxShadow: comment.user === 'C'
+        ? 'rgb(0 121 107) 0px 2px 35px'
+        : 'rgb(255 129 0) 0px 2px 35px',
+      borderWidth: 'thick',
+    }}
+    contentArrowStyle={{
+      borderRight: comment.user === 'C'
+        ? '7px solid #e0f7fa'
+        : '7px solid #ffeb3b',
+      boxShadow: comment.user === 'C'
+        ? 'rgb(0 121 107) 0px 2px 35px'
+        : 'rgb(255 129 0) 0px 2px 35px',
+    }}
+    date={comment.createdAt}
+    dateClassName="dateClassName"
+    iconStyle={{
+      background: comment.user === 'C' ? '#00796b' : '#f57c00',
+      color: '#fff',
+    }}
+    icon={
+      <Icon
+        path={comment.user === 'C' ? mdiAccount : mdiFaceAgent}
+        size={1}
+      />
+    }
+  >
+    <h3 className="vertical-timeline-element-title">
+      {comment.user === 'C' ? 'Me' : 'Replier'}
+    </h3>
+    <p>{comment.commentsText}</p>
+  </VerticalTimelineElement>
+))}
+
+
 {/* First Comment - Message */}
-<VerticalTimelineElement
+{/* <VerticalTimelineElement
 className="vertical-timeline-element--message"
 contentStyle={{     color: 'rgb(0, 0, 0)',
 borderStyle: 'double',
@@ -1477,10 +1944,10 @@ icon={<Icon path={mdiAccount} size={1}></Icon>}
 >
 <h3 className="vertical-timeline-element-title">User 1</h3>
 <p>This is the initial comment on the timeline.</p>
-</VerticalTimelineElement>
+</VerticalTimelineElement> */}
 
 {/* Reply Comment - Replier */}
-<VerticalTimelineElement
+{/* <VerticalTimelineElement
 className="vertical-timeline-element--replier"
 contentStyle={{     color: 'rgb(0, 0, 0)',
 borderStyle: 'double',
@@ -1496,10 +1963,10 @@ icon={<Icon path={mdiFaceAgent} size={1}></Icon>}
 >
 <h3 className="vertical-timeline-element-title">Replier</h3>
 <p>This is a reply to the previous comment.</p>
-</VerticalTimelineElement>
+</VerticalTimelineElement> */}
 
 {/* Second Comment - Message */}
-<VerticalTimelineElement
+{/* <VerticalTimelineElement
 className="vertical-timeline-element--message"
 contentStyle={{     color: 'rgb(0, 0, 0)',
 borderStyle: 'double',
@@ -1515,10 +1982,10 @@ icon={<Icon path={mdiAccount} size={1}></Icon>}
 >
 <h3 className="vertical-timeline-element-title">User 1</h3>
 <p>Another message continuing the discussion.</p>
-</VerticalTimelineElement>
+</VerticalTimelineElement> */}
 
 {/* Reply Comment - Replier */}
-<VerticalTimelineElement
+{/* <VerticalTimelineElement
 className="vertical-timeline-element--replier"
 contentStyle={{     color: 'rgb(0, 0, 0)',
 borderStyle: 'double',
@@ -1534,7 +2001,7 @@ icon={<Icon path={mdiFaceAgent} size={1}></Icon>}
 >
 <h3 className="vertical-timeline-element-title">Replier</h3>
 <p>Replying again to keep the conversation going.</p>
-</VerticalTimelineElement>
+</VerticalTimelineElement> */}
 </VerticalTimeline>
 
 
@@ -1590,7 +2057,9 @@ Close
     display:pageState=='In Process'?'none':'flex',
     placeContent: 'end'}}>
    {updated ? (
-<button className="footerbarbutton" style={{   display: 'flex', padding: '10px' ,
+<button className="footerbarbutton" 
+onClick={()=>requestQuotation()}
+style={{   display: 'flex', padding: '10px' ,
     borderRadius: '10px',
     border: 'none',
     backgroundColor: '#9583c6bd',
@@ -1686,8 +2155,114 @@ Close
 
 
 </section>}
+{partnersShDialog && <section style={{  height: '100vh',
+    width: '100vw',}}>
+  <div onClick={()=>{setPartnersShDialog(false);setPartnersSelectedRow(null);}} style={{   backdropFilter: 'blur(2px)',
+    backgroundColor: '#87868a8f',
+    height: '-webkit-fill-available',
+    width: '-webkit-fill-available',
+    zIndex: '1100',
+    position: 'fixed',
+    top: '0',
+    left: '0'}}></div>
+  <div
+  style={{
+    zIndex: '1100',
+    position: 'fixed',
+    top: '0', // Ensure it's positioned at the top of the page
+    left: '0', // Align with the left side of the page
+    backgroundColor: '#ffffff',
+    borderRadius: '10px',
+    width: '170vh',
+    height: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    positionArea: 'center'
+  }}
+>
+  {/* Header Section */}
+  <h3 style={{ margin: '20px', flex: '0 0 auto' }}>Select Partner</h3>
+
+  {/* Scrollable DataGrid Section */}
+  <Paper style={{ flex: '1 1 auto', overflow: 'hidden' }}>
+    <div style={{ height: '100%', overflowY: 'scroll',scrollbarWidth:'thin' }}>
+      <DataGrid
+
+        rows={partnersSh}
+        columns={columnsPartnersSh}
+        autoHeight
+        pageSize={15}
+        onRowClick={(params)=>addPartner(params)}
+        // checkboxSelection
+        // disableSelectionOnClick
+        // onSelectionModelChange={(newSelection) => handleSelectionChange(newSelection)}
+      />
+    </div>
+  </Paper>
+
+  {/* Button Section */}
+  <div style={{ padding: '20px', flex: '0 0 auto', textAlign: 'center' }}>
+    {/* <Button onClick={(params)=>addNewRow(params)} style={{    background: '#6d6d6d',
+    color: 'white'}}>Confirm</Button> */}
+  </div>
+</div>
 
 
+</section>}
+{commonShDialog && <section style={{  height: '100vh',
+    width: '100vw',}}>
+  <div onClick={()=>{setCommonShDialog(false);setCommonShSelected(null);setCommonShSelectedField(null);}} style={{   backdropFilter: 'blur(2px)',
+    backgroundColor: '#87868a8f',
+    height: '-webkit-fill-available',
+    width: '-webkit-fill-available',
+    zIndex: '1100',
+    position: 'fixed',
+    top: '0',
+    left: '0'}}></div>
+  <div
+  style={{
+    zIndex: '1100',
+    position: 'fixed',
+    top: '0', // Ensure it's positioned at the top of the page
+    left: '0', // Align with the left side of the page
+    backgroundColor: '#ffffff',
+    borderRadius: '10px',
+    width: '170vh',
+    height: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    positionArea: 'center'
+  }}
+>
+  {/* Header Section */}
+  <h3 style={{ margin: '20px', flex: '0 0 auto' }}>Choose Value</h3>
+
+  {/* Scrollable DataGrid Section */}
+  <Paper style={{ flex: '1 1 auto', overflow: 'hidden' }}>
+    <div style={{ height: '100%', overflowY: 'scroll',scrollbarWidth:'thin' }}>
+      <DataGrid
+
+        rows={commonShSelected}
+        columns={columnsCommonSh}
+        autoHeight
+        pageSize={15}
+        onRowClick={(params)=>addFieldFromSh(params)}
+        // checkboxSelection
+        // disableSelectionOnClick
+        // onSelectionModelChange={(newSelection) => handleSelectionChange(newSelection)}
+      />
+    </div>
+  </Paper>
+
+  {/* Button Section */}
+  <div style={{ padding: '20px', flex: '0 0 auto', textAlign: 'center' }}>
+    {/* <Button onClick={(params)=>addNewRow(params)} style={{    background: '#6d6d6d',
+    color: 'white'}}>Confirm</Button> */}
+  </div>
+</div>
+
+
+</section>}
 
 
 <footer style={{display: 'flex',
