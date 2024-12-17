@@ -1,4 +1,4 @@
-import { AppBar, Button, Grid, IconButton, Input, MenuItem, Paper, Select, Tab, Table, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField } from "@material-ui/core";
+import { AppBar, Box, Button, Grid, IconButton, Input, MenuItem, Paper, Select, Tab, Table, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField, Typography } from "@material-ui/core";
 import _ from 'lodash';
 import {
   mdiListBoxOutline,
@@ -31,6 +31,10 @@ import {
   mdiMinus,
   mdiPlus,
   mdiDeleteForeverOutline,
+  mdiCartArrowDown,
+  mdiAccountCreditCardOutline,
+  mdiInvoiceListOutline,
+  mdiReceiptTextCheckOutline,
 } from "@mdi/js";
 import 'react-vertical-timeline-component/style.min.css';
 import Icon from "@mdi/react";
@@ -41,9 +45,9 @@ import "../App.css";
 import mahLogo from "../mahindra-logo-new.webp";
 import { DataGrid, renderEditInputCell, renderEditSingleSelectCell } from "@material-ui/data-grid";
 import { VerticalTimeline, VerticalTimelineElement } from "react-vertical-timeline-component";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { SpinnerCircularSplit, SpinnerDiamond, SpinnerInfinity, SpinnerRomb } from "spinners-react";
-import { deleteAndUpdRequestVehiclesByMaterialCode, deleteFiles, deletePurchaseRequestByUUID, deleteRequestVehiclesByMaterialCode, getCommentsByPurchaseEnquiryUuid, getFilesByPurchaseId, getFilesByUrl, getPurchaseRequestsByCustomerId, getPurchaseRequestsByUUID, getRequestVehiclesByPurchaseEnquiryUuid, getSh, getUserById, getVehiclesInventory, patchGeneralInfo, postFilesPurchaseReq, postRequestVehiclesByMaterialCode } from "../api";
+import { createOrder, deleteAndUpdRequestVehiclesByMaterialCode, deleteFiles, deletePurchaseRequestByUUID, deleteRequestVehiclesByMaterialCode, getCommentsByPurchaseEnquiryUuid, getFilesByPurchaseId, getFilesByUrl, getInvoiceOrBillByPurchaseOrderUUID, getPurchaseRequestsByCustomerId, getPurchaseRequestsByUUID, getRequestVehiclesByPurchaseEnquiryUuid, getSh, getUserById, getVehiclesInventory, patchGeneralInfo, postFilesPurchaseReq, postRequestVehiclesByMaterialCode } from "../api";
 
 
 
@@ -55,19 +59,63 @@ var initialRows = [];
 var initialRows1 = [];
 var generalInfoInitialData ={};
 var commentsInitial ='';
+var objectPageParent='';
+var pagetitle1='';
+
 const PrObjectPage = ()=>{
 //    const initialUpdated = true;
 // const [refreshKey, setRefreshKey] = useState(0);
+const[pageTitle,setPageTitle]=useState('');
 const[generalInfoLoader,setGeneralInfoLoader]=useState(true);
 const[vehiclesLoader,setVehiclesLoader]=useState(true);
 const[attachmentsLoader,setAttachmentsLoader]=useState(true);
 const [updated,setUpdated]=useState(true);   
 // const updated = false;
 const [vehiclesSh,setVehiclesSh]=useState([]);
+const[vehiclesShSalesorgAndDistrichnl,setVehiclesShSalesorgAndDistrichnl]=useState({
+  items: [
+    {
+      id:1,
+      columnField: "salesOrg", // Field to filter
+      operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+      value:' ',        // Default filter value
+    },
+    {
+      id:2,
+      columnField: "distributionChnl", // Field to filter
+      operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+      value:' ',        // Default filter value
+    },
+  ],
+})
+
 const [vehiclesShSelectedRows,setVehiclesShSelectedRows]=useState([]);
 const [vehiclesShDialog,setVehiclesShDialog]=useState(false);
 
 const [partnersSh,setPartnersSh]=useState([]);
+const[partnersShSalesorgAndDistrichnlAndDiv,setPartnersShSalesorgAndDistrichnlAndDiv]=useState({
+  items: [
+    {
+      id:1,
+      columnField: "sHField2", // Field to filter
+      operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+      value:' ',        // Default filter value
+    },
+    {
+      id:2,
+      columnField: "sHId2", // Field to filter
+      operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+      value:' ',        // Default filter value
+    },
+    {
+      id:3,
+      columnField: "sHDescription2", // Field to filter
+      operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+      value:' ',        // Default filter value
+    },
+  ],
+})
+
 const [partnersShDialog,setPartnersShDialog]=useState(false);
 const [partnersSelectedRow,setPartnersSelectedRow]=useState(null);
 
@@ -109,7 +157,32 @@ const handleSelectionChange = (selection) => {
       // },[])
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [pageEditable, setPageEditable] = useState(false);
+    // const[objectPageParent,setObjectPageParent]=useState("");
+    // const[PageId,setPageId]=useState("")
+    const location = useLocation();
+    const prevPage = location.state || {};
+    if(prevPage){
+     objectPageParent=prevPage.pageType;
+     pagetitle1 = prevPage.title;
+    }
+    else{
+     objectPageParent="Request";
+     pagetitle1='';}
     const PageId = useParams().id;
+    // if(pagetitle1 != "")
+      // setPageTitle(pagetitle1);
+    // if(pageidd.startsWith("Order")){
+    //   setObjectPageParent("Order")
+    // }else{
+    //   setObjectPageParent("Request")
+    // }
+    // const PageId = pageidd.startsWith("Order")?pageidd.slice(5):pageidd;
+    // if(PageIdd){
+    //   setPageId(PageIdd.slice(5));
+    //   setObjectPageParent("Order")}
+    // else{
+    // setPageId(PageIdd);
+    // setObjectPageParent("Request")}
     // const [pageStatus,setPageStatus] = useState("");
     const getIconForMediaType = (mediaType) => {
         switch (mediaType) {
@@ -243,7 +316,7 @@ const handleSelectionChange = (selection) => {
       // });
 
       const fetchGeneralInfo = async ()=>{
-        let pr = await getPurchaseRequestsByUUID(PageId);
+        let pr = await getPurchaseRequestsByUUID(PageId,objectPageParent);
         let custData = await getUserById(pr.data.value[0].customerId);
         if(pr.data.value[0].status == 'Draft'){
           setPageState('Draft');
@@ -251,12 +324,39 @@ const handleSelectionChange = (selection) => {
         else if(pr.data.value[0].status == 'In Process'){
           setPageState('Quotation');
           setPageEditable(false)}
-        else{
+        else if(pr.data.value[0].status == 'Approved'){
+          setPageState('In Process');
+          setPageTitle('Placed Order');
+          setPageEditable(false);  
+        }else{
         setPageState('In Process');
         setPageEditable(false);  
       }
+      if(objectPageParent == 'Order')
         generalInfoInitialData = {
           "companyName": custData.companyName,
+          "name": custData.name,
+          "contactPerson": custData.contactPerson,
+          "phoneNumber": custData.phone,
+          "emailAddress": custData.email,
+          "van": custData.van,
+          "address": custData.address,
+          "status":pr.data.value[0].status,
+          "purchaseOrderUuid":pr.data.value[0].purchaseOrderUuid,
+          "rzpOrderId":pr.data.value[0].rzpOrderId,
+          "purchaseOrderId":pr.data.value[0].purchaseOrderId,
+          "documentType": pr.data.value[0].docType,
+          "salesOrg": pr.data.value[0].salesOrg,
+          "distributionChannel": pr.data.value[0].distributionChannels,
+          "division": pr.data.value[0].division,
+          "totalAmount":pr.data.value[0].totalAmount,
+          "taxAmount":pr.data.value[0].taxAmount,
+          "grandTotal":pr.data.value[0].grandTotal,
+        };
+        else
+        generalInfoInitialData = {
+          "companyName": custData.companyName,
+          "name": custData.name,
           "contactPerson": custData.contactPerson,
           "phoneNumber": custData.phone,
           "emailAddress": custData.email,
@@ -277,13 +377,13 @@ const handleSelectionChange = (selection) => {
         let vehicleInvData = await getVehiclesInventory();
         let vehicleInvDataSh = [];
         vehicleInvData.data.value.forEach((element,index) => {
-          let vhData ={id:index,vehicleCode:element.vehicleCode,vehicleName:element.vehicleName,vehicleColor:element.vehicleColor,quantity:1};
+          let vhData ={id:index,vehicleCode:element.vehicleCode,distributionChnl:element.distributionChnl,salesOrg:element.salesOrg,vehicleName:element.vehicleName,vehicleColor:element.vehicleColor,quantity:1};
           vehicleInvDataSh.push(vhData);
         });
         setVehiclesSh(vehicleInvDataSh);
 
         let partnersData = await getSh('Partners');
-        let salesOrgData = await getSh('Sales Org');
+        let salesOrgData = await getSh('Sales Organisation');
         let distriChData = await getSh('Distribution Channel');
         let divisionData = await getSh('Division');
         let docTypeData = await getSh('Document Type');
@@ -294,11 +394,11 @@ const handleSelectionChange = (selection) => {
     docTypeDataSH = [];
 
         partnersData.data.value.forEach((element,index) => {
-          let ptData ={id:index,sHKey:element.sHKey,sHField:element.sHField,sHId:element.sHId,sHDescription:element.sHDescription};
+          let ptData ={id:index,sHKey:element.sHKey,sHField:element.sHField,sHId:element.sHId,sHDescription:element.sHDescription,sHField2:element.sHField2,sHId2:element.sHId2,sHDescription2:element.sHDescription2};
           partnersDataSh.push(ptData);
         });
         salesOrgData.data.value.forEach((element,index) => {
-          let ptData ={id:index,sHKey:element.sHKey,sHField:element.sHField,sHId:element.sHId,sHDescription:element.sHDescription};
+          let ptData ={id:index,sHKey:element.sHKey,sHField:element.sHField,sHId:element.sHId,sHDescription:element.sHDescription,sHField2:element.sHField2,sHId2:element.sHId2,sHDescription2:element.sHDescription2};
           salesOrgDataSH.push(ptData);
         });
         distriChData.data.value.forEach((element,index) => {
@@ -319,16 +419,16 @@ const handleSelectionChange = (selection) => {
         setVehiclesLoader(false);
         commentsInitial =pr.data.value[0].commentsText
         setComments(commentsInitial);
-        let commentsHistory = await getCommentsByPurchaseEnquiryUuid(PageId);
+        let commentsHistory = await getCommentsByPurchaseEnquiryUuid(PageId,objectPageParent);
         if(commentsHistory.data.value == null ||commentsHistory.data.value == undefined)
           commentsHistory.data.value = [];
         setCommentHistory(commentsHistory.data.value);
         console.log(commentsHistory.data.value);
-      let requestVehicleData = await getRequestVehiclesByPurchaseEnquiryUuid(PageId);
+      let requestVehicleData = await getRequestVehiclesByPurchaseEnquiryUuid(PageId,objectPageParent);
       let initialRowsLet =[];
       console.log(requestVehicleData)
       requestVehicleData.data.value.forEach((vehileData,index)=>{
-        initialRowsLet.push({id:(index+1),vehicleCode:vehileData.materialCode,vehicleName:vehileData.vehicleName,vehicleColor:vehileData.vehicleColor,quantity:vehileData.quantity,uuid:vehileData.vehicleId,partnerNumber:vehileData.partnerNumber,partnerRole:vehileData.partnerRole,pricePerUnit:vehileData.pricePerUnit,actualPrice:vehileData.actualPrice,band:vehileData.band,discount:vehileData.discount.replace(/[^0-9.]/g, ""),discountpertype:vehileData.discount.includes('%'),discountedPrice:vehileData.discountedPrice,taxPercentage:vehileData.taxPercentage,totalPrice:vehileData.totalPrice});
+        initialRowsLet.push({id:(index+1),vehicleCode:vehileData.materialCode,distributionChnl:generalInfoInitialData.distributionChannel ,salesOrg:generalInfoInitialData.salesOrg,vehicleName:vehileData.vehicleName,vehicleColor:vehileData.vehicleColor,quantity:vehileData.quantity,uuid:vehileData.vehicleId,partnerNumber:vehileData.partnerNumber,partnerRole:vehileData.partnerRole,pricePerUnit:vehileData.pricePerUnit,actualPrice:vehileData.actualPrice,band:vehileData.band,discount:vehileData.discount.replace(/[^0-9.]/g, ""),discountpertype:vehileData.discount.includes('%'),discountedPrice:vehileData.discountedPrice,taxPercentage:vehileData.taxPercentage,totalPrice:vehileData.totalPrice,delId:vehileData.delId,preferredDelDate:vehileData.preferredDelDate,preferredDelLocation:vehileData.preferredDelLocation,delDate:vehileData.delDate?vehileData.delDate:null,delLocation:vehileData.delLocation?vehileData.delLocation:null,transportMode:vehileData.transportMode?vehileData.transportMode:null});
       })
       initialRows=initialRowsLet;
     //   initialRows = [
@@ -347,13 +447,14 @@ const handleSelectionChange = (selection) => {
         console.log(row);
       });
      
-let FilesData = await getFilesByPurchaseId(PageId);
+let FilesData = await getFilesByPurchaseId(PageId,objectPageParent);
 let initialItemsCopy = [];
 // FilesData.data.value.forEach(async (file,index)=>{
 
   for(let i = 0;i<FilesData.data.value.length;i++){
     console.log(FilesData.data.value[i].id);
-    let fileObj = await getFilesByUrl(`EnquiryFiles/${FilesData.data.value[i].id}/content`);
+    let urlForGetFilesByUrl = `EnquiryFiles/${FilesData.data.value[i].id}/content`;
+    let fileObj = await getFilesByUrl(urlForGetFilesByUrl);
     console.log(fileObj);
   
     let obj = {};
@@ -577,104 +678,377 @@ if(initialItems == null ||initialItems == undefined)
           );}, headerName: "Partner Number", flex: 1  ,minWidth: 350 },
 
 
-          {hide:pageState == 'Quotation'?false:true, field: "pricePerUnit", headerName: "Price per Unit.", flex: 1  ,minWidth: 350 },
-          {hide:pageState == 'Quotation'?false:true, field: "actualPrice", headerName: "Actual Price", flex: 1  ,minWidth: 350 },
-          {hide:pageState == 'Quotation'?false:true, field: "band", headerName: "Band Applied", flex: 1  ,minWidth: 350 },
-          {hide:pageState == 'Quotation'?false:true, field: "discount", headerName: "Discount % / price", flex: 1  ,minWidth: 350 ,renderCell:(params)=>(<><TextField  onChange={(e)=>{
-           if(e.target.value.trim() == "")
-            e.target.value ='0';
-           if(e.target.value.includes("-"))
-            return
-            let row = rows.find((row)=>row.id == params.row.id);
-           let bandper =  parseFloat(row.band.match(/\((.+?)%\)/)[1]).toFixed(2);
-           let actualPrice = parseFloat(row.actualPrice);
-            if(row.discountpertype){
-              var discountedprice = (actualPrice - (actualPrice * ((parseFloat(bandper)+parseFloat(parseFloat(e.target.value).toFixed(2))) / 100)));
-              if(discountedprice < 1)
-                return
-              var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
-            }else{
-              var discountedprice = (actualPrice - (actualPrice * (parseFloat(bandper)/ 100)))-e.target.value;
-              if(discountedprice < 1)
-                return
-              var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
-            }
-            if(e.target.value =='0')
-              e.target.value =''
-            setRows((prevRows) =>
-              prevRows.map((row) =>
-                row.id === params.row.id ? { ...row, discount: e.target.value,discountedPrice:discountedprice.toString(),totalPrice:totalprice.toString() } : row
-              )
-            );
-          }} value={params.value}></TextField> <div style={{margin:'auto'}}><input  id={params.id}
-           onChange={()=>{console.log("hi",params.id)
-            setRows((prevRows) =>
-              prevRows.map((row) =>
-                row.id === params.id ? { ...row,discountpertype:!row.discountpertype} : row
-              )
-            );
-
-
-
-            let row = rows.find((row)=>row.id == params.id);
-            if(row.discount.trim() == "")
-              row.discount ='0';
-             if(row.discount.includes("-"))
-              return
-             
-             let bandper =  parseFloat(row.band.match(/\((.+?)%\)/)[1]).toFixed(2);
-             let actualPrice = parseFloat(row.actualPrice);
-              if(!row.discountpertype){
-                var discountedprice = (actualPrice - (actualPrice * ((parseFloat(bandper)+parseFloat(parseFloat(row.discount).toFixed(2))) / 100)));
-                if(discountedprice < 1){
-                  row.discount='0'
-                  var discountedprice = (actualPrice - (actualPrice * ((parseFloat(bandper)+parseFloat(parseFloat(row.discount).toFixed(2))) / 100)));
-                  var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
-                   if(row.discount =='0')
-                row.discount =''
-                  setRows((prevRows) =>
-                    prevRows.map((row) =>
-                      row.id === params.row.id ? { ...row, discount: '',discountedPrice:discountedprice.toString(),totalPrice:totalprice.toString() } : row
-                    )
-                  );
-                  return
-                }
-                var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
-              }else{
-                var discountedprice = (actualPrice - (actualPrice * (parseFloat(bandper)/ 100)))-parseFloat(row.discount);
-                if(discountedprice < 1){
-                  row.discount='0'
-                  var discountedprice = (actualPrice - (actualPrice * ((parseFloat(bandper)+parseFloat(parseFloat(row.discount).toFixed(2))) / 100)));
-                  var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
-                  if(row.discount =='0')
-                row.discount =''
-                  setRows((prevRows) =>
-                    prevRows.map((row) =>
-                      row.id === params.row.id ? { ...row, discount: '',discountedPrice:discountedprice.toString(),totalPrice:totalprice.toString() } : row
-                    )
-                  );
-                return
-                }
-                var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
+          {hide:(pageState == 'Quotation'||parseFloat(generalInfoInitialData.grandTotal)>0)?false:true, field: "pricePerUnit", headerName: "Price per Unit.", flex: 1  ,minWidth: 350 },
+          {hide:(pageState == 'Quotation'||parseFloat(generalInfoInitialData.grandTotal)>0)?false:true, field: "actualPrice", headerName: "Actual Price", flex: 1  ,minWidth: 350 },
+          {hide:(pageState == 'Quotation'||parseFloat(generalInfoInitialData.grandTotal)>0)?false:true, field: "band", headerName: "Band Applied", flex: 1  ,minWidth: 350 },
+          {hide:(pageState == 'Quotation'||parseFloat(generalInfoInitialData.grandTotal)>0)?false:true, field: "discount", headerName: "Discount % / price", flex: 1  ,minWidth: 350 ,
+            renderCell: (params) => {
+              if (pageState === 'In Process') {
+                return <div>{rows.find((row) => row.id === params.id)?.discountpertype?params.value+" %":params.value}</div>;
               }
-              if(row.discount =='0')
-                row.discount =''
-              setRows((prevRows) =>
-                prevRows.map((row) =>
-                  row.id === params.row.id ? { ...row, discount: row.discount.toString(),discountedPrice:discountedprice.toString(),totalPrice:totalprice.toString() } : row
-                )
-              );
+            
+              return (
+                <>
+                  <TextField
+                    onChange={(e) => {
+                      let value = e.target.value.trim();
+                      // if (value === "") value = "0";
+                      value = value.replace(/[^0-9.]/g, "");
+if ((value.match(/\./g) || []).length > 1) {
+  value = value.replace(/\.+$/, "");
+}
+if (value === "") value = "0";
 
-          }}
-           checked={ rows.find((row)=>row.id == params.id).discountpertype} type="checkbox"/>%</div></>)},
-          {hide:pageState == 'Quotation'?false:true, field: "discountedPrice", headerName: "Discounted Price", flex: 1  ,minWidth: 350 },
-          {hide:pageState == 'Quotation'?false:true, field: "taxPercentage", headerName: "Tax", flex: 1  ,minWidth: 350 },
-          {hide:pageState == 'Quotation'?false:true, field: "totalPrice", headerName: "Total Price", flex: 1  ,minWidth: 350 },
+                      // if (value === "" || isNaN(Number(value))) {
+                      //   value = "0";
+                      // }
+                      
+                      if (value.includes("-")) return;
+            
+                      const row = rows.find((row) => row.id === params.row.id);
+                      if (!row) return;
+            
+                      const bandper = parseFloat(row.band.match(/\((.+?)%\)/)[1]);
+                      const actualPrice = parseFloat(row.actualPrice);
+                      let discountedPrice, totalPrice;
+            
+                      if (row.discountpertype) {
+                        // Calculate discount as percentage
+                        const discountValue = parseFloat(value);
+                        discountedPrice =
+                          actualPrice - actualPrice * ((bandper + discountValue) / 100);
+            
+                        if (discountedPrice < 1) return;
+            
+                        totalPrice =
+                          discountedPrice +
+                          (parseFloat(row.taxPercentage) * discountedPrice) / 100;
+                      } else {
+                        // Calculate discount as a flat value
+                        discountedPrice =
+                          actualPrice - actualPrice * (bandper / 100) - parseFloat(value);
+            
+                        if (discountedPrice < 1) return;
+            
+                        totalPrice =
+                          discountedPrice +
+                          (parseFloat(row.taxPercentage) * discountedPrice) / 100;
+                      }
+            
+                      // Handle empty value
+                      if (value === "0") value = "";
+            
+                      // Update rows
+                      setRows((prevRows) =>
+                        prevRows.map((row) =>
+                          row.id === params.row.id
+                            ? {
+                                ...row,
+                                discount: value,
+                                discountedPrice: discountedPrice.toFixed(2),
+                                totalPrice: totalPrice.toFixed(2),
+                              }
+                            : row
+                        )
+                      );
+                    }}
+                    value={params.value}
+                  />
+                  <div style={{ margin: "auto" }}>
+                    <input
+                      id={params.id}
+                      onChange={() => {
+                        console.log("hi", params.id);
+            
+                        // Toggle `discountpertype`
+                        setRows((prevRows) =>
+                          prevRows.map((row) =>
+                            row.id === params.id
+                              ? { ...row, discountpertype: !row.discountpertype }
+                              : row
+                          )
+                        );
+            
+                        const row = rows.find((row) => row.id === params.id);
+                        if (!row) return;
+            
+                        let discountValue = row.discount.trim();
+                        if (discountValue === "") discountValue = "0";
+                        if (discountValue.includes("-")) return;
+            
+                        const bandper = parseFloat(row.band.match(/\((.+?)%\)/)[1]);
+                        const actualPrice = parseFloat(row.actualPrice);
+                        let discountedPrice, totalPrice;
+            
+                        if (!row.discountpertype) {
+                          discountedPrice =
+                            actualPrice -
+                            actualPrice * ((bandper + parseFloat(discountValue)) / 100);
+            
+                          if (discountedPrice < 1) {
+                            discountValue = "0";
+                            discountedPrice =
+                              actualPrice -
+                              actualPrice * ((bandper + parseFloat(discountValue)) / 100);
+                          }
+            
+                          totalPrice =
+                            discountedPrice +
+                            (parseFloat(row.taxPercentage) * discountedPrice) / 100;
+                        } else {
+                          discountedPrice =
+                            actualPrice -
+                            actualPrice * (bandper / 100) -
+                            parseFloat(discountValue);
+            
+                          if (discountedPrice < 1) {
+                            discountValue = "0";
+                            discountedPrice =
+                              actualPrice -
+                              actualPrice * ((bandper + parseFloat(discountValue)) / 100);
+                          }
+            
+                          totalPrice =
+                            discountedPrice +
+                            (parseFloat(row.taxPercentage) * discountedPrice) / 100;
+                        }
+            
+                        // Update rows
+                        setRows((prevRows) =>
+                          prevRows.map((row) =>
+                            row.id === params.id
+                              ? {
+                                  ...row,
+                                  discount: discountValue === "0" ? "" : discountValue,
+                                  discountedPrice: discountedPrice.toFixed(2),
+                                  totalPrice: totalPrice.toFixed(2),
+                                }
+                              : row
+                          )
+                        );
+                      }}
+                      checked={
+                        rows.find((row) => row.id === params.id)?.discountpertype || false
+                      }
+                      type="checkbox"
+                    />
+                    %
+                  </div>
+                </>
+              );
+            }},
+            
+            //   renderCell:(params)=>{pageState == 'In Process'?():(<><TextField  onChange={(e)=>{
+          //  if(e.target.value.trim() == "")
+          //   e.target.value ='0';
+          //  if(e.target.value.includes("-"))
+          //   return
+          //   let row = rows.find((row)=>row.id == params.row.id);
+          //  let bandper =  parseFloat(row.band.match(/\((.+?)%\)/)[1]).toFixed(2);
+          //  let actualPrice = parseFloat(row.actualPrice);
+          //   if(row.discountpertype){
+          //     var discountedprice = (actualPrice - (actualPrice * ((parseFloat(bandper)+parseFloat(parseFloat(e.target.value).toFixed(2))) / 100)));
+          //     if(discountedprice < 1)
+          //       return
+          //     var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
+          //   }else{
+          //     var discountedprice = (actualPrice - (actualPrice * (parseFloat(bandper)/ 100)))-e.target.value;
+          //     if(discountedprice < 1)
+          //       return
+          //     var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
+          //   }
+          //   if(e.target.value =='0')
+          //     e.target.value =''
+          //   setRows((prevRows) =>
+          //     prevRows.map((row) =>
+          //       row.id === params.row.id ? { ...row, discount: e.target.value,discountedPrice:discountedprice.toString(),totalPrice:totalprice.toString() } : row
+          //     )
+          //   );
+          // }} value={params.value}></TextField> <div style={{margin:'auto'}}><input  id={params.id}
+          //  onChange={()=>{console.log("hi",params.id)
+          //   setRows((prevRows) =>
+          //     prevRows.map((row) =>
+          //       row.id === params.id ? { ...row,discountpertype:!row.discountpertype} : row
+          //     )
+          //   );
+
+
+
+          //   let row = rows.find((row)=>row.id == params.id);
+          //   if(row.discount.trim() == "")
+          //     row.discount ='0';
+          //    if(row.discount.includes("-"))
+          //     return
+             
+          //    let bandper =  parseFloat(row.band.match(/\((.+?)%\)/)[1]).toFixed(2);
+          //    let actualPrice = parseFloat(row.actualPrice);
+          //     if(!row.discountpertype){
+          //       var discountedprice = (actualPrice - (actualPrice * ((parseFloat(bandper)+parseFloat(parseFloat(row.discount).toFixed(2))) / 100)));
+          //       if(discountedprice < 1){
+          //         row.discount='0'
+          //         var discountedprice = (actualPrice - (actualPrice * ((parseFloat(bandper)+parseFloat(parseFloat(row.discount).toFixed(2))) / 100)));
+          //         var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
+          //          if(row.discount =='0')
+          //       row.discount =''
+          //         setRows((prevRows) =>
+          //           prevRows.map((row) =>
+          //             row.id === params.row.id ? { ...row, discount: '',discountedPrice:discountedprice.toString(),totalPrice:totalprice.toString() } : row
+          //           )
+          //         );
+          //         return
+          //       }
+          //       var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
+          //     }else{
+          //       var discountedprice = (actualPrice - (actualPrice * (parseFloat(bandper)/ 100)))-parseFloat(row.discount);
+          //       if(discountedprice < 1){
+          //         row.discount='0'
+          //         var discountedprice = (actualPrice - (actualPrice * ((parseFloat(bandper)+parseFloat(parseFloat(row.discount).toFixed(2))) / 100)));
+          //         var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
+          //         if(row.discount =='0')
+          //       row.discount =''
+          //         setRows((prevRows) =>
+          //           prevRows.map((row) =>
+          //             row.id === params.row.id ? { ...row, discount: '',discountedPrice:discountedprice.toString(),totalPrice:totalprice.toString() } : row
+          //           )
+          //         );
+          //       return
+          //       }
+          //       var totalprice = discountedprice + ((parseFloat(row.taxPercentage)*discountedprice)/100 );
+          //     }
+          //     if(row.discount =='0')
+          //       row.discount =''
+          //     setRows((prevRows) =>
+          //       prevRows.map((row) =>
+          //         row.id === params.row.id ? { ...row, discount: row.discount.toString(),discountedPrice:discountedprice.toString(),totalPrice:totalprice.toString() } : row
+          //       )
+          //     );
+
+          // }}
+          //  checked={ rows.find((row)=>row.id == params.id).discountpertype} type="checkbox"/>%</div></>)}},
+          {hide:(pageState == 'Quotation'||parseFloat(generalInfoInitialData.grandTotal)>0)?false:true, field: "discountedPrice", headerName: "Discounted Price", flex: 1  ,minWidth: 350 },
+          {hide:(pageState == 'Quotation'||parseFloat(generalInfoInitialData.grandTotal)>0)?false:true, field: "taxPercentage", headerName: "Tax", flex: 1  ,minWidth: 350 },
+          {hide:(pageState == 'Quotation'||parseFloat(generalInfoInitialData.grandTotal)>0)?false:true, field: "totalPrice", headerName: "Total Price", flex: 1  ,minWidth: 350 },
+          {hide:pageState=='Draft', field: "delId", headerName: "Delivery ID", flex: 1 ,minWidth: 350 },
+          {
+            field: "preferredDelDate",
+            headerName: "Preferred Delivery Date",
+            flex: 1,
+            
+            minWidth: 350,
+            
+            renderCell: (params) => {
+              if (pageState === "Draft") {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1); // Set minimum date to tomorrow
+          
+                const isError = !params.value; // Check if the value is empty (error state)
+          
+                return (
+                  <TextField
+                    type="date"
+                    error={isError}
+                    // variant="standard"
+                    helperText={isError ? "* Required" : ""}
+                    value={params.value || ""}
+                    InputProps={{
+                      disableUnderline: true, // Remove underline
+                      style: { borderBottom: isError ? "2px solid red" : "none" }, // Apply red border on error
+                    }}
+                    inputProps={{
+                      min: tomorrow.toISOString().split("T")[0], // Restrict to tomorrow onwards
+                    }}
+                    onChange={(event) => {
+                      const newValue = event.target.value;
+                      setRows((prevRows) =>
+                        prevRows.map((row) =>
+                          row.id === params.id ? { ...row, [params.field]: newValue } : row
+                        )
+                      );
+                    }}
+                    style={{
+                      width: "100%",
+                      background: "transparent",
+                      // border: isError ? "1px solid red" : "none", // Apply red border for error state
+                    }}
+                  />
+                );
+              }
+              return params.value || ""; // Display the value as text when not in "Draft" mode
+            }
+          },
+          {hide:(objectPageParent != 'Order'||pagetitle1 == 'Purchase Orders'), field: "delDate", headerName: "Delivery Date", flex: 1 ,minWidth: 350 },
+          {
+            field: "preferredDelLocation",
+            headerName: "Preferred Delivery Location",
+            flex: 1,
+            minWidth: 350,
+            renderCell: (params) => {
+              if (pageState === "Draft") {
+                const isError = !params.value; // Check if the value is empty (error state)
+          
+                return (
+                  <TextField
+                    type="text"
+                    value={params.value || ""}
+                    error={isError}
+                    variant="standard"
+                    helperText={isError ? "* Required" : ""}
+                    InputProps={{
+                      // disableUnderline: true, // Remove underline for cleaner appearance
+                      // style: { border: isError ? "1px solid red" : "none" }, // Apply red border for error state
+                    }}
+                    onChange={(event) => {
+                      const newValue = event.target.value;
+                      setRows((prevRows) =>
+                        prevRows.map((row) =>
+                          row.id === params.id ? { ...row, [params.field]: newValue } : row
+                        )
+                      );
+                    }}
+                    style={{
+                      width: "100%",
+                      background: "transparent",
+                      // border: isError ? "1px solid red" : "none", // Red border for error state
+                    }}
+                  />
+                );
+              }
+              return params.value || ""; // Display the value as text when not in "Draft" mode
+            }
+          },          
+          {hide:(objectPageParent != 'Order'||pagetitle1 == 'Purchase Orders'), field: "delLocation", headerName: "Delivery Location", flex: 1  ,minWidth: 350 },
+          // { field: "preferredTransportMode", headerName: "Preferred Transport Mode", flex: 1  ,minWidth: 350 ,renderCell: (params) => {
+          //   if (pageState === "Draft") {
+          //  return <input
+          //     type="text"
+          //     value={params.value || ""}
+          //     onChange={(event) => {
+          //       const newValue = event.target.value; // Get the input value
+          //       setRows((prevRows) =>
+          //         prevRows.map((row) =>
+          //           row.id === params.id ? { ...row, [params.field]: newValue } : row
+          //         )
+          //       );
+          //     }}
+          //     style={{
+          //       width: "100%",
+          //       border: "none",           // No border
+          //       background: "transparent",
+          //       outline: "none",          // No outline on focus
+          //     }}
+          //   />}else{
+          //     return params.value || "";
+          //   }}
+          // },
+          {hide:(objectPageParent != 'Order'||pagetitle1 == 'Purchase Orders'), field: "transportMode", headerName: "Transport Mode", flex: 1  ,minWidth: 350 },
+          
       ];
       const columnsVehicleSh = [
         { field: "vehicleCode", headerName: "Vehicle Code", flex: 1  },
         { field: "vehicleName", headerName: "Vehicle Name", flex: 1  },
-        { field: "vehicleColor", headerName: "Vehicle Color", flex: 1  }
+        { field: "vehicleColor", headerName: "Vehicle Color", flex: 1  },
+        { field: "salesOrg", headerName: "Sales Org.", flex: 1,hide:true  },
+        { field: "distributionChnl", headerName: "Distri Chanel", flex: 1,hide:true  }
       ];
       const columnsCommonSh = [
         { field: "sHKey",hide:true, headerName: "Vehicle Code", flex: 1  },
@@ -687,6 +1061,9 @@ if(initialItems == null ||initialItems == undefined)
         { field: "sHField",hide:true, headerName: "Vehicle Name", flex: 1  },
         { field: "sHId", headerName: "Role", flex: 1  },
         { field: "sHDescription", headerName: "Number", flex: 1  },
+        { field: "sHField2", headerName: "Sales Org.", flex: 1,hide:true  },
+        { field: "sHId2", headerName: "Distri Chanel", flex: 1,hide:true  },
+        { field: "sHDescription2", headerName: "Division", flex: 1,hide:true  },
       ];
      
       const handeSave = async () =>{
@@ -694,13 +1071,19 @@ if(initialItems == null ||initialItems == undefined)
         if(!_.isEqual(generalInfoData, generalInfoInitialData) || !_.isEqual(comments, commentsInitial)){
           setGeneralInfoLoader(true);
           try {
-            let body={contactPerson:generalInfoData.contactPerson,distributionChannels:generalInfoData.distributionChannel,division:generalInfoData.division,docType:generalInfoData.documentType,salesOrg:generalInfoData.salesOrg,commentsText:comments,totalAmount:generalInfoData.totalAmount,taxAmount:generalInfoData.taxAmount,grandTotal:generalInfoData.grandTotal}
-            let res=await patchGeneralInfo(PageId,body);
+            
+            var sBody1={};
+            if(pageState == 'Draft')
+              sBody1={contactPerson:generalInfoData.contactPerson,distributionChannels:generalInfoData.distributionChannel,division:generalInfoData.division,docType:generalInfoData.documentType,salesOrg:generalInfoData.salesOrg,commentsText:comments}
+            else
+              sBody1={contactPerson:generalInfoData.contactPerson,distributionChannels:generalInfoData.distributionChannel,division:generalInfoData.division,docType:generalInfoData.documentType,salesOrg:generalInfoData.salesOrg,commentsText:comments,totalAmount:generalInfoData.totalAmount,taxAmount:generalInfoData.taxAmount,grandTotal:generalInfoData.grandTotal}
+            let res=await patchGeneralInfo(PageId,sBody1,objectPageParent);
             console.log(res);
             let pr = await getPurchaseRequestsByUUID(PageId);
         let custData = await getUserById(pr.data.value[0].customerId);
             generalInfoInitialData = {
               "companyName": custData.companyName,
+              "name": custData.name,
               "contactPerson": custData.contactPerson,
               "phoneNumber": custData.phone,
               "emailAddress": custData.email,
@@ -735,7 +1118,7 @@ if(initialItems == null ||initialItems == undefined)
               // let updatedRows = rows.filter((row)=>initialRows.some((iRow)=>iRow.vehicleCode== row.vehicleCode ));
               let updatedRows = rows.filter((row) => 
                 initialRows1.some((iRow) => 
-                  (iRow.vehicleCode == row.vehicleCode && (iRow.quantity != row.quantity ||iRow.partnerRole != row.partnerRole ||iRow.partnerNumber != row.partnerNumber||iRow.discount != row.discount||iRow.discountedPrice != row.discountedPrice||iRow.totalPrice != row.totalPrice||iRow.discount != row.discount||iRow.discountpertype != row.discountpertype))
+                  (iRow.vehicleCode == row.vehicleCode && (iRow.quantity != row.quantity ||iRow.partnerRole != row.partnerRole ||iRow.partnerNumber != row.partnerNumber||iRow.discount != row.discount||iRow.discountedPrice != row.discountedPrice||iRow.totalPrice != row.totalPrice||iRow.discount != row.discount||iRow.discountpertype != row.discountpertype||iRow.preferredDelDate != row.preferredDelDate||iRow.preferredDelLocation != row.preferredDelLocation))
                 )
               );
 
@@ -748,11 +1131,11 @@ if(initialItems == null ||initialItems == undefined)
                 })
               }
               await vehicleItemsOnSave();
-              let requestVehicleData = await getRequestVehiclesByPurchaseEnquiryUuid(PageId);
+              let requestVehicleData = await getRequestVehiclesByPurchaseEnquiryUuid(PageId,objectPageParent);
               let initialRowsLet =[];
               console.log(requestVehicleData)
               requestVehicleData.data.value.forEach((vehileData,index)=>{
-                initialRowsLet.push({id:(index+1),vehicleCode:vehileData.materialCode,vehicleName:vehileData.vehicleName,vehicleColor:vehileData.vehicleColor,quantity:vehileData.quantity,uuid:vehileData.vehicleId,partnerNumber:vehileData.partnerNumber,partnerRole:vehileData.partnerRole,pricePerUnit:vehileData.pricePerUnit,actualPrice:vehileData.actualPrice,band:vehileData.band,discount:vehileData.discount.replace(/[^0-9.]/g, ""),discountpertype:vehileData.discount.includes('%'),discountedPrice:vehileData.discountedPrice,taxPercentage:vehileData.taxPercentage,totalPrice:vehileData.totalPrice});
+                initialRowsLet.push({id:(index+1),vehicleCode:vehileData.materialCode,distributionChnl:generalInfoInitialData.distributionChannel ,salesOrg:generalInfoInitialData.salesOrg,vehicleName:vehileData.vehicleName,vehicleColor:vehileData.vehicleColor,quantity:vehileData.quantity,uuid:vehileData.vehicleId,partnerNumber:vehileData.partnerNumber,partnerRole:vehileData.partnerRole,pricePerUnit:vehileData.pricePerUnit,actualPrice:vehileData.actualPrice,band:vehileData.band,discount:vehileData.discount.replace(/[^0-9.]/g, ""),discountpertype:vehileData.discount.includes('%'),discountedPrice:vehileData.discountedPrice,taxPercentage:vehileData.taxPercentage,totalPrice:vehileData.totalPrice,delId:vehileData.delId,preferredDelDate:vehileData.preferredDelDate,preferredDelLocation:vehileData.preferredDelLocation,delDate:vehileData.delDate?vehileData.delDate:null,delLocation:vehileData.delLocation?vehileData.delLocation:null,transportMode:vehileData.transportMode?vehileData.transportMode:null});
               })
               initialRows=initialRowsLet;
             
@@ -872,13 +1255,14 @@ if(initialItems == null ||initialItems == undefined)
           return new Promise(async (resolve)=>{
            
     const intervalId = setInterval(async () => {
-      let FilesData = await getFilesByPurchaseId(PageId);
+      let FilesData = await getFilesByPurchaseId(PageId,objectPageParent);
       let initialItemsCopy = [];
       // FilesData.data.value.forEach(async (file,index)=>{
       
         for(let i = 0;i<FilesData.data.value.length;i++){
           console.log(FilesData.data.value[i].id);
-          let fileObj = await getFilesByUrl(`EnquiryFiles/${FilesData.data.value[i].id}/content`);
+          let urlForGetFilesByUrl = `EnquiryFiles/${FilesData.data.value[i].id}/content`;
+          let fileObj = await getFilesByUrl(urlForGetFilesByUrl);
           console.log(fileObj);
         
           let obj = {};
@@ -964,18 +1348,20 @@ if(initialItems == null ||initialItems == undefined)
 
       //   setAttachmentsLoader(false);
       }
-      const requestQuotation = async ()=>{
+      const requestQuotation = async (newStatus)=>{
+        const requestQuotationCallBack = (razorpay_payment_id) =>{
+          console.log(razorpay_payment_id);
         setGeneralInfoLoader(true);
         setVehiclesLoader(true);
         setAttachmentsLoader(true);
         var errString="";
         if(rows.length == 0)
           errString+= "\n-> Please select atlesat 1 item to request for quotation";
-        if(rows.some((row)=>(!row.partnerRole ||!row.partnerNumber)))
+        if(rows.some((row)=>(!row.partnerRole ||!row.partnerNumber||!row.preferredDelDate||!row.preferredDelLocation)))
           errString+= "\n-> Mandatory fields to be filled in List Of Items";
           if(items.length == 0)
             errString+= "\n-> Attachments are mandatory ";
-          if(!comments)
+          if(!comments && pagetitle1 != 'Sales Orders')
             errString+= "\n-> Comments are mandatory";
             if(!generalInfoData.division|| !generalInfoData.distributionChannel||!generalInfoData.salesOrg||!generalInfoData.documentType)
        errString+= "\n-> some Mandatory fields are missing please make sure to fill them out!!";
@@ -988,7 +1374,10 @@ if(initialItems == null ||initialItems == undefined)
         }
             const reqQuotePr = async ()=>{
           return new Promise(async (resolve)=>{
-            let res = await patchGeneralInfo(PageId,{status:'Create Request'});//deploy
+            let generalinfobod ={status:newStatus};
+            if(newStatus == 'Paid')
+              generalinfobod ={status:newStatus,transactionId:razorpay_payment_id};
+            let res = await patchGeneralInfo(PageId,generalinfobod,objectPageParent);//deploy
             if(res){//deploy
 // let pr =async()=> new Promise((resolve)=>{ setTimeout(() => {//testing
   
@@ -1007,6 +1396,55 @@ setGeneralInfoLoader(false);
 
        reqQuotePr();
        setRefreshKey1((prevKey) => prevKey + 1);
+        }
+        if(newStatus == 'Paid' && generalInfoData.grandTotal){
+          try {
+            
+              let body= JSON.stringify({ amount: parseFloat(generalInfoData.grandTotal),orderId:generalInfoData.rzpOrderId?generalInfoData.rzpOrderId:'' }); // Pass amount here
+            
+            const result =  await createOrder(body);
+            const orderId = result.orderId;
+      
+            // Razorpay options
+            const options = {
+              key: "rzp_test_Fo31M0JKpjOpgb",
+              amount: result.amount, // Amount from backend
+              currency: "INR",
+              name: `Vehicles Order (${generalInfoData.purchaseOrderId?generalInfoData.purchaseOrderId:'NA'})`,
+              description: `Payment for vehicle order (${generalInfoData.purchaseOrderId?generalInfoData.purchaseOrderId:'NA'})`,
+              order_id: orderId,
+              handler: async function (response) {
+                alert("Payment Successful! Payment ID: " + response.razorpay_payment_id);
+                await patchGeneralInfo(PageId,{rzpOrderId:orderId},objectPageParent);
+                requestQuotationCallBack(response.razorpay_payment_id);
+                console.log(response); // Handle success
+              },
+              prefill: {
+                name: generalInfoData.name,
+                email: generalInfoData.emailAddress,
+                contact: generalInfoData.phoneNumber.startsWith("+91 ") ?  generalInfoData.phoneNumber.slice(4) :  generalInfoData.phoneNumber,
+              },
+              theme: { color: "#800000ad" },
+              modal: {
+                ondismiss: async function () {
+                  alert("Payment was dismissed!");
+                  await patchGeneralInfo(PageId,{rzpOrderId:orderId},objectPageParent);
+                }
+              }
+            };
+      
+            const rzp = new window.Razorpay(options);
+            rzp.on("payment.failed", function (response) {
+              alert("Payment Failed! Error: " + response.error.description);
+              console.error("Payment failed:", response.error);
+            });
+            rzp.open();
+          } catch (error) {
+            console.error("Error initiating payment: ", error);
+          }
+        }else{
+          requestQuotationCallBack('NA');
+        }
       // window.location.reload();
       };
       const [refreshKey, setRefreshKey] = useState(0);
@@ -1075,17 +1513,75 @@ setGeneralInfoLoader(false);
         let taxamt = parseFloat(parseFloat(grandTotal-totalPrice).toFixed(2));
         setgeneralInfoData((prev) => ({
           ...prev,
-          totalAmount: totalPrice.toString(),
-          taxAmount: taxamt.toString(),
-          grandTotal: grandTotal.toString(),
+          totalAmount: totalPrice.toFixed(2).toString(),
+          taxAmount: taxamt.toFixed(2).toString(),
+          grandTotal: parseFloat(grandTotal).toFixed(2),
         }));
       }
     },[rows])
     useEffect(() => {
+
+        if(generalInfoData.salesOrg){
+          const formatArray =(array)=>{
+            let formattedArray=[];
+            array.forEach((arr)=>{
+              formattedArray.push({...arr,sHId:arr.sHId2,sHDescription:arr.sHDescription2,sHField:arr.sHField2})
+            })
+            return formattedArray;
+          }
+          let divisionShData =salesOrgSh.filter((sItem)=>sItem.sHId == generalInfoData.salesOrg && sItem.sHField2=='Division');
+          let distriChShData =salesOrgSh.filter((sItem)=>sItem.sHId == generalInfoData.salesOrg && sItem.sHField2=='Distribution Channel');
+          setDivisionSh(formatArray(divisionShData));
+          setDistriChSh(formatArray(distriChShData));
+         
+        }
+        setPartnersShSalesorgAndDistrichnlAndDiv({
+          items: [
+            {
+              id:1,
+              columnField: "sHField2", // Field to filter
+              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+              value:generalInfoData.salesOrg?generalInfoData.salesOrg:' ',        // Default filter value
+            },
+            {
+              id:2,
+              columnField: "sHId2", // Field to filter
+              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+              value:generalInfoData.distributionChannel?generalInfoData.distributionChannel:' ',        // Default filter value
+            },
+            {
+              id:3,
+              columnField: "sHDescription2", // Field to filter
+              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+              value:generalInfoData.division?generalInfoData.division:' ',        // Default filter value
+            },
+          ],
+        })
+          setVehiclesShSalesorgAndDistrichnl({
+            items: [
+              {
+                id:1,
+                columnField: "salesOrg", // Field to filter
+                operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+                value: generalInfoData.salesOrg?generalInfoData.salesOrg:' ',        // Default filter value
+              },
+              {
+                id:2,
+                columnField: "distributionChnl", // Field to filter
+                operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+                value:generalInfoData.distributionChannel?generalInfoData.distributionChannel:' ',        // Default filter value
+              },
+            ],
+          });
+        
         // Example logic to update `updated` based on some conditions
+        const ignoredFields = ["grandTotal", "taxAmount", "totalAmount"];
         if (_.isEqual(comments, commentsInitial) && _.isEqual(generalInfoData, generalInfoInitialData) &&  _.isEqual(rows, initialRows) &&  _.isEqual(items, initialItems) ) {
           setUpdated(true);
-        }else{
+        }else if(pageState == 'Draft' && _.isEqual(comments, commentsInitial) && _.isEqual(_.omit(generalInfoData, ignoredFields), _.omit(generalInfoInitialData, ignoredFields)) &&  _.isEqual(rows, initialRows) &&  _.isEqual(items, initialItems) ){
+          setUpdated(true);  
+          
+          }else{
             setUpdated(false);
             console.log(_.isEqual(comments, commentsInitial) , _.isEqual(generalInfoData, generalInfoInitialData) ,  _.isEqual(rows, initialRows) ,  _.isEqual(items, initialItems) )
           console.log(generalInfoData,generalInfoInitialData)
@@ -1117,19 +1613,58 @@ setGeneralInfoLoader(false);
       }
       const addFieldFromSh = async(params)=>{
         // setgeneralInfoData({...generalInfoData,documentType:params.row.sHId});
-        setgeneralInfoData((prev) => ({
-          ...prev,
-          [commonShSelectedField]: params.row.sHId,
-        }));
+        if((commonShSelectedField == "salesOrg" && params.row.sHId != generalInfoData.salesOrg)||(commonShSelectedField == "distributionChannel" && params.row.sHId != generalInfoData.distributionChannel)||(commonShSelectedField == "division" && params.row.sHId != generalInfoData.division)){                     
+          let newVehicleSh = rows.map((newVh, index) => {
+            return {
+              ...newVh,        // Spread the properties of the existing object
+              id: index + 1,   // Add the `id` property
+              quantity: 1,     // Add the `quantity` property
+            };
+          });
+          
+          vehiclesSh.forEach((vSh,index)=>{
+            vSh.id = newVehicleSh.length + (index+1);
+            
+            newVehicleSh.push(vSh);
+          })
+          setVehiclesSh(newVehicleSh);
+          setRows([]);
+        }
+        if(commonShSelectedField == "salesOrg" && params.row.sHId != generalInfoData.salesOrg){
+          setgeneralInfoData((prev) => ({
+            ...prev,
+            [commonShSelectedField]: params.row.sHId,
+            division:'',
+            distributionChannel:''
+          }));
+        }else{
+          setgeneralInfoData((prev) => ({
+            ...prev,
+            [commonShSelectedField]: params.row.sHId,
+          }));
+        }
         setCommonShDialog(false);setCommonShSelected(null);setCommonShSelectedField(null);
       }
       const handleCommonShOpen = async(field)=>{
+        const removeDuplicates = (array) => {
+          const uniqueIds = []; // Array to track unique IDs
+          return array.filter((item) => {
+            if (uniqueIds.includes(item.sHId)) {
+              return false; // Exclude duplicates
+            }
+            uniqueIds.push(item.sHId); // Add unique ID to the tracking array
+            return true; // Include unique item
+          });
+        };
+
         if(pageState=='Draft'){
         setCommonShSelectedField(field);
         if(field =='documentType' )
         setCommonShSelected(docTypeSh);
-     else if(field ==  'salesOrg')
-        setCommonShSelected(salesOrgSh);
+     else if(field ==  'salesOrg'){
+      let filteredSalesOrg = removeDuplicates(salesOrgSh);
+        setCommonShSelected(filteredSalesOrg);
+      }
      else if(field ==  'distributionChannel' )
         setCommonShSelected(distriChSh);
       else if(field == 'division')
@@ -1152,7 +1687,7 @@ return doctype+" ("+description.sHDescription+")";
    <div
         style={{
           // rgb(211, 197, 255)
-          background: "rgb(226 226 255)",
+          background: objectPageParent == 'Order'?"rgb(255, 222, 222)": "rgb(226 226 255)",
           width: "100%",
           height: "100%",
           zIndex: "-1",
@@ -1164,7 +1699,7 @@ return doctype+" ("+description.sHDescription+")";
         position="static"
         style={{
 
-          backgroundColor: "#5b4891",
+          backgroundColor: objectPageParent == 'Order'?'rgb(128, 0, 0)':"#5b4891",
           boxShadow: "0 1px 10px rgb(5 4 0)",
         }}
       >
@@ -1181,7 +1716,7 @@ flexDirection:'row'}}>
             marginTop: "10px",
           }}
         >
-          {generalInfoData.purchaseEnquiryId}
+          {generalInfoData.purchaseEnquiryId ||generalInfoData.purchaseOrderId}
           
         </span>
         {pageState == 'Draft' && (<div style={{ marginTop:'auto',   right: '15vh',
@@ -1227,7 +1762,8 @@ flexDirection:'row'}}>
                 />
             <span style={{    fontSize: 'x-large',
     fontFamily: 'auto'}}>
-            {pageState}
+            {
+            (pageTitle||pagetitle1)?pagetitle1?pagetitle1:pageTitle: pageState}
         </span></div>
          
             </section>
@@ -1306,11 +1842,11 @@ flexDirection:'row'}}>
     <section 
       style={{ marginTop: "12vh", marginLeft: "15vh", marginRight: "15vh" }}
     >
-      <div className="prSection"
+      <div className={ objectPageParent == 'Order'?'prSectionO': "prSection"}
         style={{
           // boxShadow: 'rgb(31, 31, 31) 0px 0px 15px',
           borderRadius: '20px',
-          backgroundColor: 'aliceblue',
+          backgroundColor:objectPageParent == 'Order'?'#fffbfb': 'aliceblue',
           display: "flex",
           flexDirection: "column",
         }}
@@ -1356,7 +1892,7 @@ color: '#6d6d6d'}}>General Information.</span>
                 value={generalInfoData.companyName} 
                 className="prfields" 
                 required 
-                style={{ width: '60ch', backgroundColor: 'aliceblue' }} 
+                style={{ width: '60ch', backgroundColor: objectPageParent == 'Order'?'#fffbfb': 'aliceblue' }} 
                 label='Company Name' 
                 variant="outlined"
                 onChange={(e) => {
@@ -1373,7 +1909,7 @@ color: '#6d6d6d'}}>General Information.</span>
                 value={generalInfoData.contactPerson} 
                 className="prfields" 
                 required 
-                style={{ width: '35ch', backgroundColor: 'aliceblue' }} 
+                style={{ width: '35ch', backgroundColor: objectPageParent == 'Order'?'#fffbfb': 'aliceblue' }} 
                 label='Contact Person' 
                 variant="outlined"
                 onChange={(e) => setgeneralInfoData({ ...generalInfoData, contactPerson: e.target.value })}
@@ -1386,7 +1922,7 @@ color: '#6d6d6d'}}>General Information.</span>
                 value={generalInfoData.phoneNumber} 
                 className="prfields" 
                 required 
-                style={{ width: '25ch', backgroundColor: 'aliceblue' }} 
+                style={{ width: '25ch', backgroundColor: objectPageParent == 'Order'?'#fffbfb': 'aliceblue' }} 
                 label='Phone Number' 
                 variant="outlined"
                 onChange={(e) => setgeneralInfoData({ ...generalInfoData, phoneNumber: e.target.value })}
@@ -1399,7 +1935,7 @@ color: '#6d6d6d'}}>General Information.</span>
                 value={generalInfoData.emailAddress} 
                 className="prfields" 
                 required 
-                style={{ width: '35ch', backgroundColor: 'aliceblue' }} 
+                style={{ width: '35ch', backgroundColor: objectPageParent == 'Order'?'#fffbfb': 'aliceblue' }} 
                 label='Email Address' 
                 variant="outlined"
                 onChange={(e) => setgeneralInfoData({ ...generalInfoData, emailAddress: e.target.value })}
@@ -1412,7 +1948,7 @@ color: '#6d6d6d'}}>General Information.</span>
                 value={generalInfoData.van} 
                 className="prfields" 
                 required 
-                style={{ width: '30ch', backgroundColor: 'aliceblue' }} 
+                style={{ width: '30ch', backgroundColor: objectPageParent == 'Order'?'#fffbfb': 'aliceblue' }} 
                 label='VAN' 
                 variant="outlined"
                 onChange={(e) => setgeneralInfoData({ ...generalInfoData, van: e.target.value })}
@@ -1425,7 +1961,7 @@ color: '#6d6d6d'}}>General Information.</span>
                 value={generalInfoData.address} 
                 className="prfields" 
                 required 
-                style={{ width: '110ch', backgroundColor: 'aliceblue' }} 
+                style={{ width: '110ch', backgroundColor: objectPageParent == 'Order'?'#fffbfb': 'aliceblue' }} 
                 label='Address' 
                 variant="outlined"
                 onChange={(e) => setgeneralInfoData({ ...generalInfoData, address: e.target.value })}
@@ -1441,7 +1977,7 @@ color: '#6d6d6d'}}>General Information.</span>
                 value={getDisplayValue(generalInfoData.documentType,docTypeSh)}
                 className="prfields" 
                 required 
-                style={{ width: '25ch', backgroundColor: pageEditable?'white':'aliceblue' }} 
+                style={{ width: '25ch', backgroundColor: pageEditable?'white':objectPageParent == 'Order'?'#fffbfb': 'aliceblue' }} 
                 label='Document Type' 
                 variant="outlined"
                 // onChange={(e) => setgeneralInfoData({ ...generalInfoData, documentType: e.target.value })}
@@ -1456,7 +1992,7 @@ color: '#6d6d6d'}}>General Information.</span>
                 value={getDisplayValue(generalInfoData.salesOrg,salesOrgSh)} 
                 className="prfields" 
                 required 
-                style={{ width: '25ch', backgroundColor:  pageEditable?'white':'aliceblue' }} 
+                style={{ width: '25ch', backgroundColor:  pageEditable?'white':objectPageParent == 'Order'?'#fffbfb': 'aliceblue' }} 
                 label='Sales Org.' 
                 variant="outlined"
                 // onChange={(e) => setgeneralInfoData({ ...generalInfoData, salesOrg: e.target.value })}
@@ -1464,14 +2000,15 @@ color: '#6d6d6d'}}>General Information.</span>
         
               <TextField 
                 InputProps={{
-                  readOnly: !pageEditable,
+                  readOnly:!(pageEditable && generalInfoData.salesOrg?true:false),
                 }}
-                onClick={()=>handleCommonShOpen('distributionChannel')}
+                onClick={generalInfoData.salesOrg?()=>handleCommonShOpen('distributionChannel'):()=>{}}
                 error={generalInfoData.distributionChannel?false:true}
+                // error={true}
                 value={getDisplayValue(generalInfoData.distributionChannel,distriChSh)} 
                 className="prfields" 
                 required 
-                style={{ width: '25ch', backgroundColor:  pageEditable?'white':'aliceblue' }} 
+                style={{ width: '25ch', backgroundColor:  (pageEditable&& generalInfoData.salesOrg?true:false)?'white':objectPageParent == 'Order'?'#fffbfb': 'aliceblue' }} 
                 label='Distribution Channel' 
                 variant="outlined"
                 // onChange={(e) => setgeneralInfoData({ ...generalInfoData, distributionChannel: e.target.value })}
@@ -1479,14 +2016,14 @@ color: '#6d6d6d'}}>General Information.</span>
         
               <TextField 
                 InputProps={{
-                  readOnly: !pageEditable,
+                  readOnly: !(pageEditable && generalInfoData.salesOrg?true:false),
                 }}
-                onClick={()=>handleCommonShOpen('division')}
+                onClick={ generalInfoData.salesOrg?()=>handleCommonShOpen('division'):()=>{}}
                 error={generalInfoData.division?false:true}
                 value={getDisplayValue(generalInfoData.division,divisionSh)} 
                 className="prfields" 
                 required 
-                style={{ width: '25ch', backgroundColor:  pageEditable?'white':'aliceblue' }} 
+                style={{ width: '25ch', backgroundColor:  (pageEditable&& generalInfoData.salesOrg)?'white':objectPageParent == 'Order'?'#fffbfb': 'aliceblue' }} 
                 label='Division' 
                 variant="outlined"
                 // onChange={(e) => setgeneralInfoData({ ...generalInfoData, division: e.target.value })}
@@ -1498,11 +2035,11 @@ color: '#6d6d6d'}}>General Information.</span>
       </div>
     </section>
     <section  style={{ marginTop: "10vh", marginLeft: "15vh", marginRight: "15vh" }}>
-    <div className="prSection"
+    <div className={ objectPageParent == 'Order'?'prSectionO': "prSection"}
         style={{
           // boxShadow: 'rgb(31, 31, 31) 0px 0px 15px',
           borderRadius: '20px',
-          backgroundColor: 'aliceblue',
+          backgroundColor: objectPageParent == 'Order'?'#fffbfb': 'aliceblue',
           display: "flex",
           flexDirection: "column",
         }}
@@ -1607,7 +2144,7 @@ color: '#6d6d6d'}}>List of Items.</span>
   /> */}
 </Paper>
 
-  {pageState == 'Quotation' && <section style={{ 
+  {(pageState == 'Quotation' ||pageTitle !=''||objectPageParent=='Order' ) && <section style={{ 
     height: '150px',
     marginTop: '30px',
     borderRadius: '2px',
@@ -1659,11 +2196,11 @@ color: '#6d6d6d'}}>List of Items.</span>
     <section 
       style={{ marginTop: "10vh", marginLeft: "15vh", marginRight: "15vh" }}
     >
-      <div className="prSection"
+      <div className={ objectPageParent == 'Order'?'prSectionO': "prSection"}
         style={{
           // boxShadow: 'rgb(31, 31, 31) 0px 0px 15px',
           borderRadius: '20px',
-          backgroundColor: 'aliceblue',
+          backgroundColor: objectPageParent == 'Order'?'#fffbfb': 'aliceblue',
           display: "flex",
           flexDirection: "column",
         }}
@@ -1748,10 +2285,10 @@ flexDirection: 'row',   padding: '30px',  minHeight: '100px'}}>
     <section 
 style={{ marginTop: "10vh", marginLeft: "15vh", marginRight: "15vh" }}
 >
-<div className="prSection"
+<div className={ objectPageParent == 'Order'?'prSectionO': "prSection"}
 style={{
   borderRadius: '20px',
-  backgroundColor: 'aliceblue',
+  backgroundColor:objectPageParent == 'Order'?'#fffbfb': 'aliceblue',
   display: "flex",
   flexDirection: "column",
 }}
@@ -1800,13 +2337,13 @@ style={{
 <div style={{ display: 'flex', justifyContent: 'center', flexDirection: 'column', padding: '30px', minHeight: '100px' }}>
 
   <textarea
-  readOnly={!pageEditable}
+  readOnly={(!pageEditable && pageState == 'In Process')}
     placeholder="Write your comment here..."
     value={comments}
     
     onChange={(e) => setComments(e.target.value )}
     style={{
-      backgroundColor:pageEditable?'white':'aliceblue',
+      backgroundColor:(pageEditable || pageState != 'In Process')?'white':objectPageParent == 'Order'?'#fffbfb': 'aliceblue',
       fontFamily: 'sans-serif',
       width: '100%',
       minHeight: '80px',
@@ -1837,7 +2374,7 @@ scrollbarColor: '#e5c100 #d6d6d6'
     width: '70%',
     
     height: '90%',
-backgroundColor: '#ece8ff',
+backgroundColor:  objectPageParent == 'Order'?'rgb(255 184 184 / 84%)':'#ece8ff',
 boxShadow: '0px 0px 15px rgba(0, 0, 0, 0.3)',
 borderRadius: '15px',
 display: 'flex',
@@ -1857,7 +2394,7 @@ overflowY: 'scroll',
 backgroundColor: '#e8e8e8',
 border: 'solid 2px',
 borderColor: '#988bd5',
-boxShadow: 'rgb(152 139 214) 0px 0px 5px',
+boxShadow:  objectPageParent == 'Order'?'rgb(255 0 0) 0px 0px 5px':'rgb(152 139 214) 0px 0px 5px',
 borderRadius: 'inherit'}} id='timeline1'>
 <VerticalTimeline>
 <VerticalTimelineElement
@@ -2045,7 +2582,7 @@ Close
   backdropFilter: 'blur(3px)'}} onClick={closeDialog}></div>
 )}
 
-<div  className="footertab" style={ {  
+<div  className={objectPageParent == 'Order'?'footertabO':"footertab"} style={ {  
     
     padding: '15px',
     zIndex: '1',
@@ -2054,27 +2591,70 @@ Close
     bottom: '7vh',
     left: '50%',
     transform: 'translateX(-50%)',
-    display:pageState=='In Process'?'none':'flex',
+    display:(pageState=='In Process')?(pagetitle1 == 'Sales Orders'||pagetitle1 == 'Billing Statements')?'flex':'none':'flex',
     placeContent: 'end'}}>
-   {updated ? (
-<button className="footerbarbutton" 
-onClick={()=>requestQuotation()}
-style={{   display: 'flex', padding: '10px' ,
+   {(updated||pagetitle1 == 'Sales Orders'||pagetitle1 == 'Billing Statements') ? (
+<div style={{gap:'10px' ,display:'flex',flexDirection:'row'}}>
+  {(generalInfoData.status == 'Paid'||generalInfoData.status == 'Confirmed'||generalInfoData.status == 'Details Sent')?<span style={{color:"white"}}>Waiting for Payment Approval.</span>:<>
+  <button onClick={async()=>{let res = await getInvoiceOrBillByPurchaseOrderUUID(PageId,'invoice');
+   window.open(URL.createObjectURL(res), '_blank');
+  }} className="footerbarbutton" style={{   display: (pagetitle1 == 'Sales Orders'||pagetitle1 == 'Billing Statements')?'flex':'none', padding: '10px' ,
+       borderRadius: '10px',
+       border: 'none',
+       backgroundColor: objectPageParent == 'Order'?'rgb(169 81 81)':'#9583c6bd',
+       boxShadow: '0px 3px 8px rgb(0 0 0 / 66%)',
+       transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+       }}><Icon path={mdiInvoiceListOutline} size={1} color='white'></Icon> <span style={{    fontFamily: 'auto',
+        fontSize: 'x-large',
+        color: 'white',
+        marginLeft: '10px'}}>View Invoice</span></button>
+  <button onClick={async()=>{let res = await getInvoiceOrBillByPurchaseOrderUUID(PageId,'paymentBill');
+   window.open(URL.createObjectURL(res), '_blank');
+  }} className="footerbarbutton" style={{   display: pagetitle1 == 'Billing Statements'?'flex':'none', padding: '10px' ,
+       borderRadius: '10px',
+       border: 'none',
+       backgroundColor: objectPageParent == 'Order'?'rgb(169 81 81)':'#9583c6bd',
+       boxShadow: '0px 3px 8px rgb(0 0 0 / 66%)',
+       transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+       }}><Icon path={mdiReceiptTextCheckOutline} size={1} color='white'></Icon> <span style={{    fontFamily: 'auto',
+        fontSize: 'x-large',
+        color: 'white',
+        marginLeft: '10px'}}>View Bill</span></button>
+
+   <button className="footerbarbutton" 
+   onClick={()=>requestQuotation(pageState=='Draft'?'Create Request':pagetitle1 == 'Sales Orders'?'Paid':'Negotiation')}
+   style={{   
+    display:pagetitle1 == 'Billing Statements'?'none':'flex',
+     padding: '10px' ,
+       borderRadius: '10px',
+       border: 'none',
+       backgroundColor: objectPageParent == 'Order'?'rgb(169 81 81)':'#9583c6bd',
+       boxShadow: '0px 3px 8px rgb(0 0 0 / 66%)',
+       transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+       }}> <Icon path={pageState=='Draft'?mdiSendOutline:pagetitle1 == 'Sales Orders'?mdiAccountCreditCardOutline:mdiForumOutline} size={1} color='white'></Icon> <span style={{    fontFamily: 'auto',
+       fontSize: 'x-large',
+       color: 'white',
+       marginLeft: '10px'}}>{pageState=='Draft'?'Request Quotation':pagetitle1 == 'Sales Orders'?'Make Payment':'Negotiate'}  </span></button></>}
+ 
+  <button className="footerbarbutton" 
+onClick={()=>requestQuotation('Approved')}
+  hidden={pageState != 'Quotation'}
+style={{   padding: '10px' ,
     borderRadius: '10px',
     border: 'none',
-    backgroundColor: '#9583c6bd',
+    backgroundColor: objectPageParent == 'Order'?'rgb(169 81 81)':'#9583c6bd',
     boxShadow: '0px 3px 8px rgb(0 0 0 / 66%)',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-    }}> <Icon path={pageState=='Draft'?mdiSendOutline:mdiForumOutline} size={1} color='white'></Icon> <span style={{    fontFamily: 'auto',
+    }}> <Icon path={mdiCartArrowDown} size={1} color='white'></Icon> <span style={{    fontFamily: 'auto',
     fontSize: 'x-large',
     color: 'white',
-    marginLeft: '10px'}}>{pageState=='Draft'?'Request Quotation':'Negotiate'}  </span></button>
-    
+    marginLeft: '10px'}}>Place Order</span></button>
+  </div>  
    ): (<div style={{display:'flex',flexDirection:'row',gap:'10px'}}>
     <button className="footerbarbutton" style={{   display: 'flex', padding: '10px' ,
     borderRadius: '10px',
     border: 'none',
-    backgroundColor: '#9583c6bd',
+    backgroundColor: objectPageParent == 'Order'?'rgb(169 81 81)':'#9583c6bd',
     boxShadow: '0px 3px 8px rgb(0 0 0 / 66%)',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease'
     }}> <Icon path={mdiContentSaveCheckOutline} size={1} color='white'></Icon> <span style={{    fontFamily: 'auto',
@@ -2085,7 +2665,7 @@ style={{   display: 'flex', padding: '10px' ,
     <button className="footerbarbutton" style={{   display: 'flex', padding: '10px' ,
     borderRadius: '10px',
     border: 'none',
-    backgroundColor: '#9583c6bd',
+    backgroundColor:  objectPageParent == 'Order'?'rgb(169 81 81)':'#9583c6bd',
     boxShadow: '0px 3px 8px rgb(0 0 0 / 66%)',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease'
     }}
@@ -2128,7 +2708,9 @@ style={{   display: 'flex', padding: '10px' ,
   }}
 >
   {/* Header Section */}
-  <h3 style={{ margin: '20px', flex: '0 0 auto' }}>Add Vehicles</h3>
+  <h3 style={{ margin: '20px', flex: '0 0 auto' }}>Add Vehicles</h3><span style={{    paddingBottom: '10px',
+    paddingLeft: '20px',
+    color: 'gray'}}>Before adding vehicles, ensure the Sales Organization and Distribution Channel are correctly set.</span>
 
   {/* Scrollable DataGrid Section */}
   <Paper style={{ flex: '1 1 auto', overflow: 'hidden' }}>
@@ -2137,11 +2719,46 @@ style={{   display: 'flex', padding: '10px' ,
 
         rows={vehiclesSh}
         columns={columnsVehicleSh}
+        filterModel={vehiclesShSalesorgAndDistrichnl}
+        onFilterModelChange={(newModel) =>
+        {
+          if(newModel.linkOperator)
+            newModel.linkOperator = 'and';
+          let newFilterObj1 =newModel.items.filter((newMod)=>(newMod.columnField!='salesOrg' &&newMod.columnField!='distributionChnl'));
+          newFilterObj1=newFilterObj1.map((newfilterobj,index)=>({...newfilterobj,id:index}));
+          if(newFilterObj1.length==0){
+            newFilterObj1.push( 
+              {
+              id:0,
+              columnField: "vehicleCode", // Field to filter
+              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+              value: "",        // Default filter value
+              }
+          )
+          }
+          let newFilterObj = [...newFilterObj1,
+            {
+              id:1,
+              columnField: "salesOrg", // Field to filter
+              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+              value: generalInfoData.salesOrg?generalInfoData.salesOrg:' ',        // Default filter value
+            },
+            {
+              id:2,
+              columnField: "distributionChnl", // Field to filter
+              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+              value:generalInfoData.distributionChannel?generalInfoData.distributionChannel:' ',        // Default filter value
+            }];
+          newModel.items = newFilterObj;
+          setVehiclesShSalesorgAndDistrichnl(newModel)}
+        }
+         
         autoHeight
         pageSize={15}
         checkboxSelection
         disableSelectionOnClick
         onSelectionModelChange={(newSelection) => handleSelectionChange(newSelection)}
+        
       />
     </div>
   </Paper>
@@ -2190,6 +2807,45 @@ style={{   display: 'flex', padding: '10px' ,
 
         rows={partnersSh}
         columns={columnsPartnersSh}
+        filterModel={partnersShSalesorgAndDistrichnlAndDiv}
+        onFilterModelChange={(newModel) =>
+        {
+          if(newModel.linkOperator)
+            newModel.linkOperator = 'and';
+          let newFilterObj1 =newModel.items.filter((newMod)=>(newMod.columnField!='sHField2' &&newMod.columnField!='sHId2' && newMod.columnField!='sHDescription2'));
+          newFilterObj1=newFilterObj1.map((newfilterobj,index)=>({...newfilterobj,id:index}));
+          if(newFilterObj1.length==0){
+            newFilterObj1.push( 
+              {
+              id:0,
+              columnField: "sHId", // Field to filter
+              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+              value: "",        // Default filter value
+              }
+          )
+          }
+          let newFilterObj = [...newFilterObj1,
+            {
+              id:1,
+              columnField: "sHField2", // Field to filter
+              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+              value: generalInfoData.salesOrg?generalInfoData.salesOrg:' ',        // Default filter value
+            },
+            {
+              id:2,
+              columnField: "sHId2", // Field to filter
+              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+              value:generalInfoData.distributionChannel?generalInfoData.distributionChannel:' ',        // Default filter value
+            },
+            {
+              id:3,
+              columnField: "sHDescription2", // Field to filter
+              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+              value:generalInfoData.division?generalInfoData.division:' ',        // Default filter value
+            }];
+          newModel.items = newFilterObj;
+          setPartnersShSalesorgAndDistrichnlAndDiv(newModel)}
+        }
         autoHeight
         pageSize={15}
         onRowClick={(params)=>addPartner(params)}

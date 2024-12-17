@@ -23,6 +23,9 @@ import {
   mdiRobotExcited,
   mdiChevronRight,
   mdiCartCheck,
+  mdiInvoiceListOutline,
+  mdiReceiptTextCheckOutline,
+  mdiTrashCanOutline,
 } from "@mdi/js";
 import 'react-vertical-timeline-component/style.min.css';
 import Icon from "@mdi/react";
@@ -32,7 +35,7 @@ import mahLogo from "../mahindra-logo-new.webp";
 import { DataGrid, renderEditInputCell, renderEditSingleSelectCell } from "@material-ui/data-grid";
 import { VerticalTimeline, VerticalTimelineElement } from "react-vertical-timeline-component";
 import { useNavigate } from "react-router-dom";
-import { getPurchaseRequestsByCustomerId, postPurchaseReq } from "../api";
+import { getPurchaseOrdersByCustomerId, getPurchaseRequestsByCustomerId, postPurchaseReq } from "../api";
 import { SpinnerCircularSplit } from "spinners-react";
 
 // import { color } from "@mui/system";
@@ -119,7 +122,16 @@ const Orders = () => {
 
   const navigate = useNavigate();
   const navtoObjPage = (ID)=>{
-    navigate(`/Inquiry/${ID}`, { state: {pageType:"Request"}});
+    var title ='';
+    if(tabHidden == '0')
+      title = "Purchase Orders";
+      else if(tabHidden == '1')
+        title = "Sales Orders";
+       else if(tabHidden == '2')
+          title = "Billing Statements";
+        else
+        title = "Rejected Orders";
+    navigate(`/Order/${ID}`, { state: {pageType:"Order",title:title}});
   };
 
   useEffect(() => {
@@ -166,10 +178,13 @@ const Orders = () => {
   };
   const InProcAndQuotecolumns = [
     { field: "id", headerName: "ID", width: 150,hide:true },
-    { field: "purchaseEnquiryUuid",hide:true},
-    { minWidth: 250, field: "purchaseEnquiryId", 
+    { field: "purchaseOrderUuid",hide:true},
+    { minWidth: 250, field: "purchaseOrderId", 
        sortComparator: (v1, v2) => parseInt(v1, 10) - parseInt(v2, 10),
-       headerName: "Purchase Inquiry", flex: 1 },
+       headerName: "Purchase Order", flex: 1 },
+       { minWidth: 250, field: "purchaseEnquiryId", 
+        sortComparator: (v1, v2) => parseInt(v1, 10) - parseInt(v2, 10),
+        headerName: "Purchase Inquiry", flex: 1 },
     { minWidth: 250, field: "docType", headerName: "Document Type", flex: 1, editable: true, renderEditCell: (params) => <EditDropdownCell {...params} /> },
     { minWidth: 250, field: "salesOrg", headerName: "Sales Organisation", flex: 1, editable: true },
     { minWidth: 250, field: "distributionChannels", headerName: "Distribution Channels", flex: 1 },
@@ -187,7 +202,7 @@ const Orders = () => {
         style={{ position: 'sticky', left: 0, background: 'white', zIndex: 1 }}
           className="stickyCell"
           onClick={() =>{
-            navtoObjPage(params.row.purchaseEnquiryUuid)}}
+            navtoObjPage(params.row.purchaseOrderUuid)}}
           color="primary"
           aria-label="show row id"
         >
@@ -198,7 +213,13 @@ const Orders = () => {
   ];
   const columns = [
     { field: "id", headerName: "ID",hide:true, width: 150 },
-    { field: "purchaseEnquiryUuid",hide:true},
+    { field: "purchaseOrderUuid",hide:true},
+    { minWidth: 250, field: "purchaseOrderId", 
+      sortComparator: (v1, v2) => parseInt(v1, 10) - parseInt(v2, 10),
+      headerName: "Purchase Order", flex: 1 },
+      { minWidth: 250, field: "purchaseEnquiryId", 
+        sortComparator: (v1, v2) => parseInt(v1, 10) - parseInt(v2, 10),
+        headerName: "Purchase Inquiry", flex: 1 },
     { minWidth: 250, field: "docType", headerName: "Document Type", flex: 1, editable: true, renderEditCell: (params) => <EditDropdownCell {...params} /> },
     { minWidth: 250, field: "salesOrg", headerName: "Sales Organisation", flex: 1, editable: true },
     { minWidth: 250, field: "distributionChannels", headerName: "Distribution Channels", flex: 1 },
@@ -216,7 +237,7 @@ const Orders = () => {
         style={{ position: 'sticky', left: 0, background: 'white', zIndex: 1 }}
           className="stickyCell"
           onClick={() =>
-            navtoObjPage(params.row.purchaseEnquiryUuid)}
+            navtoObjPage(params.row.purchaseOrderUuid)}
           color="primary"
           aria-label="show row id"
         >
@@ -231,67 +252,68 @@ const Orders = () => {
     { label: "Return", value: "Return" },
   ];
   const [rows,setRows] = useState([]);
-  const [inProcessRows,setInProcessRows] = useState([]);
-  const [myOrdersRows,setMyOrdersRows] = useState([]);
-  const [quotationsRows,setQuotationsRows] = useState([]);
+  const [salesOrdersRows,setsalesOrdersRows] = useState([]);
+  const [invoicesRows,setinvoicesRows] = useState([]);
+  const [RejectedOrderRows,setRejectedOrderRows] = useState([]);
   const [rowsLoader,setRowsLoader] = useState(true);
-  const [inProcessRowsLoader,setInProcessRowsLoader] = useState(true);
-  const [myOrdersRowsLoader,setMyOrdersRowsLoader] = useState(true);
-  const [quotationsRowsLoader,setQuotationsRowsLoader] = useState(true);
+  const [salesOrdersRowsLoader,setsalesOrdersRowsLoader] = useState(true);
+  const [invoicesRowsLoader,setinvoicesRowsLoader] = useState(true);
+  const [RejectedOrderRowsLoader,setRejectedOrderRowsLoader] = useState(true);
   useEffect(()=>{
     const fetchPurchaseRequests = async () =>{
       try {
-        let res = await getPurchaseRequestsByCustomerId(sessionStorage.getItem('cId'),0);
+        let res = await getPurchaseOrdersByCustomerId(sessionStorage.getItem('cId'),0);
         console.log(res.data.value);
         let rowsArr =[];
-        let inProcessRowsArr =[];
-        let myOrdersRowsArr =[];
-        let quotationsRowsArr =[];
+        let salesOrdersRowsArr =[];
+        let invoicesRowsArr =[];
+        let RejectedOrderRowsArr =[];
         res.data.value.forEach(async (row,index) => {
           let newRow={};
           newRow.id = index+1;
           newRow.docType = row.docType || null;
-          newRow.purchaseEnquiryUuid = row.purchaseEnquiryUuid || null;
+          newRow.purchaseOrderUuid = row.purchaseOrderUuid || null;
           newRow.status = row.status || null;
           newRow.purchaseEnquiryId = row.purchaseEnquiryId || null;
+          newRow.purchaseOrderId = row.purchaseOrderId || null;
           newRow.salesOrg = row.salesOrg || null;
           newRow.distributionChannels = row.distributionChannels || null;
           newRow.division = row.division || null;
           newRow.createdAt = row.createdAt || null;
-          if(row.status == 'Draft')
+          if(row.status == 'Approved'||row.status == 'SO Pending'||row.status == 'SO Not Released'||row.status == 'Sent For Release')
           rowsArr.push(newRow);
-        else if(row.status == 'In Process')
-          quotationsRowsArr.push(newRow);
-        else if(row.status == 'Approved')
-          myOrdersRowsArr.push(newRow);
+        else if(row.status == 'Rejected')
+          RejectedOrderRowsArr.push(newRow);
+        else if(row.status == 'Payment Confirmed')
+          invoicesRowsArr.push(newRow);
         else
-        inProcessRowsArr.push(newRow);
+        salesOrdersRowsArr.push(newRow);
         });
         setRows(rowsArr);
-        let sortedinProcessRowsArr=inProcessRowsArr.sort(
-          (a, b) => parseInt(b.purchaseEnquiryId, 10) - parseInt(a.purchaseEnquiryId, 10)
+        let sortedsalesOrdersRowsArr=salesOrdersRowsArr.sort(
+          (a, b) => parseInt(b.purchaseOrderId, 10) - parseInt(a.purchaseOrderId, 10)
         );
-        let sortedmyordersArr=myOrdersRowsArr.sort(
-          (a, b) => parseInt(b.purchaseEnquiryId, 10) - parseInt(a.purchaseEnquiryId, 10)
+        let sortedmyordersArr=invoicesRowsArr.sort(
+          (a, b) => parseInt(b.purchaseOrderId, 10) - parseInt(a.purchaseOrderId, 10)
         );
-        let sortedquotationsRowsArr = quotationsRowsArr.sort(
-          (a, b) => parseInt(b.purchaseEnquiryId, 10) - parseInt(a.purchaseEnquiryId, 10)
+        let sortedRejectedOrderRowsArr = RejectedOrderRowsArr.sort(
+          (a, b) => parseInt(b.purchaseOrderId, 10) - parseInt(a.purchaseOrderId, 10)
         );
-        setInProcessRows(sortedinProcessRowsArr);
-        setMyOrdersRows(sortedmyordersArr);
-        setQuotationsRows(sortedquotationsRowsArr);
+        setsalesOrdersRows(sortedsalesOrdersRowsArr);
+        setinvoicesRows(sortedmyordersArr);
+        setRejectedOrderRows(sortedRejectedOrderRowsArr);
         setRowsLoader(false);
-        setInProcessRowsLoader(false);
-        setMyOrdersRowsLoader(false);
-        setQuotationsRowsLoader(false);
+        setsalesOrdersRowsLoader(false);
+        setinvoicesRowsLoader(false);
+        setRejectedOrderRowsLoader(false);
         console.log(rowsArr);
       } catch (error) {
         console.error("Failed to fetch Purchase Requests:", error);
       }
       setRowsLoader(false);
-      setInProcessRowsLoader(false);
-      setMyOrdersRowsLoader(false);
-        setQuotationsRowsLoader(false);
+      setsalesOrdersRowsLoader(false);
+      setinvoicesRowsLoader(false);
+        setRejectedOrderRowsLoader(false);
     }
 fetchPurchaseRequests();
   },[])
@@ -351,14 +373,10 @@ fetchPurchaseRequests();
   const handleCellEditCommit = (newRow) =>{
 console.log(newRow);
   }
-  const newPurchaseReq = async ()=>{
-    let res =await postPurchaseReq(sessionStorage.getItem('cId'));
-    if(res.data){
-      navtoObjPage(res.data.purchaseEnquiryUuid);
-    }
-  }
+ 
 
   return (
+    <div>
     <div style={{display: 'flex',
       flexDirection: 'column',
       minHeight: '100vh',
@@ -366,7 +384,7 @@ console.log(newRow);
       <div
         style={{
           // background: "rgb(211 197 255)",
-          background: "rgb(226 226 255)",
+          background: "rgb(255 222 222)",
           
           width: "100%",
           height: "100%",
@@ -378,7 +396,7 @@ console.log(newRow);
         position="static"
         style={{
           marginBottom: '50px',
-          backgroundColor: "#5b4891",
+          backgroundColor: "#800000",
           boxShadow: "0 1px 10px rgb(5 4 0)",
         }}
       >
@@ -393,7 +411,7 @@ console.log(newRow);
             marginTop: "10px",
           }}
         >
-          Purchase Requests
+          Purchase & Sales Orders
         </span>
         <Tabs centered indicatorColor="black" style={{}}>
           <Tab
@@ -408,12 +426,12 @@ console.log(newRow);
                 }}
               >
                 <Icon
-                  path={mdiFileDocumentEditOutline}
+                  path={mdiCartCheck}
                   size={1}
                   color="#FF9800"
                   style={{ marginRight: "8px" }}
                 />
-                Draft Requests
+                Purchase Orders
               </div>
             }
           />
@@ -429,12 +447,12 @@ console.log(newRow);
                 }}
               >
                 <Icon
-                  path={mdiSync}
+                  path={mdiInvoiceListOutline}
                   size={1}
                   color="#2196F3"
                   style={{ marginRight: "8px" }}
                 />
-                In Process
+                Sales Orders
               </div>
             }
           />
@@ -451,12 +469,12 @@ console.log(newRow);
                 }}
               >
                 <Icon
-                  path={mdiFileChartCheckOutline}
+                  path={mdiReceiptTextCheckOutline}
                   size={1}
                   color="#4CAF50"
                   style={{ marginRight: "8px" }}
                 />
-                Quotations
+                Billing Statements
               </div>
             }
           />
@@ -472,12 +490,12 @@ console.log(newRow);
                 }}
               >
                 <Icon
-                  path={mdiCartCheck}
+                  path={mdiTrashCanOutline}
                   size={1}
-                  color="#2196F3"
+                  color="red"
                   style={{ marginRight: "8px" }}
                 />
-                My Orders
+                Rejected Orders
               </div>
             }
           />
@@ -486,11 +504,11 @@ console.log(newRow);
       
       {tabHidden == "0" && (      <div id="firstTab" >
       <section  style={{ marginTop: "10vh", marginLeft: "15vh", marginRight: "15vh" }}>
-        <div className="prSection"
+        <div className="prSectionO"
             style={{
-              // boxShadow: 'rgb(31, 31, 31) 0px 0px 15px',
+              // boxShadow: 'rgb(255 122 122) 0px 0px 15px',
               borderRadius: '20px',
-              backgroundColor: 'aliceblue',
+              // backgroundColor: 'aliceblue',
               display: "flex",
               flexDirection: "column",
             }}
@@ -511,7 +529,7 @@ console.log(newRow);
                 }}
               >
                 <Icon
-                  path={mdiFileDocumentEditOutline}
+                  path={mdiCartCheck}
                   size={1.5}
                 />
               </section>
@@ -519,9 +537,9 @@ console.log(newRow);
     marginBottom: '5px',
     fontSize: 'x-large',
     fontFamily: 'auto',
-    color: '#6d6d6d'}}>Draft Requests.</span>
+    color: '#6d6d6d'}}>Purchase Orders.</span>
 
-    <Button onClick={()=>newPurchaseReq()} className="normalButton" style={{borderRadius:'20px',    borderRadius: '20px',
+    {/* <Button onClick={()=>newPurchaseReq()} className="normalButton" style={{borderRadius:'20px',    borderRadius: '20px',
     marginLeft: 'auto',
     marginRight: '25vh',
     marginTop: 'auto',
@@ -531,7 +549,7 @@ console.log(newRow);
                   style={{    marginRight: '2vh'                  }}
                 />
           <span style={{ 
-    color: '#6d6d6d'}}>New Request.</span></Button>
+    color: '#6d6d6d'}}>New Request.</span></Button> */}
             </div>
             {rowsLoader?(
               <SpinnerCircularSplit
@@ -601,11 +619,11 @@ console.log(newRow);
 
         {tabHidden == "1" && (      <div id="secondTab" >
       <section  style={{ marginTop: "10vh", marginLeft: "15vh", marginRight: "15vh" }}>
-        <div className="prSection"
+        <div className="prSectionO"
             style={{
               // boxShadow: 'rgb(31, 31, 31) 0px 0px 15px',
               borderRadius: '20px',
-              backgroundColor: 'aliceblue',
+              // backgroundColor: 'aliceblue',
               display: "flex",
               flexDirection: "column",
             }}
@@ -626,7 +644,7 @@ console.log(newRow);
                 }}
               >
                 <Icon
-                  path={mdiSync}
+                  path={mdiInvoiceListOutline}
                   size={1.5}
                 />
               </section>
@@ -634,9 +652,9 @@ console.log(newRow);
     marginBottom: '5px',
     fontSize: 'x-large',
     fontFamily: 'auto',
-    color: '#6d6d6d'}}>In Process</span>
+    color: '#6d6d6d'}}>Sales Orders.</span>
             </div>
-            {inProcessRowsLoader?(
+            {salesOrdersRowsLoader?(
                <SpinnerCircularSplit
                style={{ margin: "auto",padding: '30px',  minHeight: '350px' }}
                color="rgb(229 193 0)"
@@ -660,7 +678,7 @@ console.log(newRow);
                 </table> */}
   <Paper sx={{ height: '400px', width: '100%' }}>
     <DataGrid
-           rows={inProcessRows}
+           rows={salesOrdersRows}
            columns={InProcAndQuotecolumns}
           
            style={{ maxHeight: '550px', width: '100%',overflowY:'scroll',scrollbarWidth: 'thin',
@@ -693,11 +711,11 @@ console.log(newRow);
 
       {tabHidden == "2" && (<div id="thirdTab" >
         <section  style={{ marginTop: "10vh", marginLeft: "15vh", marginRight: "15vh" }}>
-        <div className="prSection"
+        <div className="prSectionO"
             style={{
               // boxShadow: 'rgb(31, 31, 31) 0px 0px 15px',
               borderRadius: '20px',
-              backgroundColor: 'aliceblue',
+              // backgroundColor: 'aliceblue',
               display: "flex",
               flexDirection: "column",
             }}
@@ -718,7 +736,7 @@ console.log(newRow);
                 }}
               >
                 <Icon
-                  path={mdiFileChartCheckOutline}
+                  path={mdiReceiptTextCheckOutline}
                   size={1.5}
                 />
               </section>
@@ -726,9 +744,9 @@ console.log(newRow);
     marginBottom: '5px',
     fontSize: 'x-large',
     fontFamily: 'auto',
-    color: '#6d6d6d'}}>Quotations / Negotiations</span>
+    color: '#6d6d6d'}}>Billing Statements</span>
             </div>
-            {quotationsRowsLoader?( <SpinnerCircularSplit
+            {RejectedOrderRowsLoader?( <SpinnerCircularSplit
               style={{ margin: "auto",padding: '30px',  minHeight: '350px' }}
               color="rgb(229 193 0)"
             ></SpinnerCircularSplit>):(
@@ -751,7 +769,7 @@ console.log(newRow);
                 </table> */}
   <Paper sx={{ height: '400px', width: '100%' }}>
     <DataGrid
-           rows={quotationsRows}
+           rows={invoicesRows}
            columns={InProcAndQuotecolumns}
           
            style={{ maxHeight: '550px', width: '100%',overflowY:'scroll',scrollbarWidth: 'thin',
@@ -785,11 +803,11 @@ console.log(newRow);
 
       {tabHidden == "3" && (      <div id="fourthTab" >
       <section  style={{ marginTop: "10vh", marginLeft: "15vh", marginRight: "15vh" }}>
-        <div className="prSection"
+        <div className="prSectionO"
             style={{
               // boxShadow: 'rgb(31, 31, 31) 0px 0px 15px',
               borderRadius: '20px',
-              backgroundColor: 'aliceblue',
+              // backgroundColor: 'aliceblue',
               display: "flex",
               flexDirection: "column",
             }}
@@ -810,7 +828,7 @@ console.log(newRow);
                 }}
               >
                 <Icon
-                  path={mdiCartCheck}
+                  path={mdiTrashCanOutline}
                   size={1.5}
                 />
               </section>
@@ -818,11 +836,11 @@ console.log(newRow);
     marginBottom: '5px',
     fontSize: 'x-large',
     fontFamily: 'auto',
-    color: '#6d6d6d'}}>My Orders.</span>
+    color: '#6d6d6d'}}>Rejected Orders.</span>
 
 
             </div>
-            {myOrdersRowsLoader?(
+            {invoicesRowsLoader?(
               <SpinnerCircularSplit
               style={{ margin: "auto",padding: '30px',  minHeight: '350px' }}
               color="rgb(229 193 0)"
@@ -846,7 +864,7 @@ console.log(newRow);
                 </table> */}
   <Paper sx={{ height: '400px', width: '100%' }}>
     <DataGrid
-           rows={myOrdersRows}
+           rows={RejectedOrderRows}
            columns={InProcAndQuotecolumns}
            initialState={{ pinnedColumns: { left: ['Actions'] },
              sorting: {
@@ -897,6 +915,9 @@ console.log(newRow);
         <span style={{color:'white'}}>Copyright© 2024 Mahindra&Mahindra Ltd. All Rights Reserved.</span></div>
         
     </footer> */}
+
+
+    </div>
     <footer style={{
         // position: 'fixed',
         // bottom: '0',
@@ -925,7 +946,6 @@ console.log(newRow);
     </span>
   </div>
 </footer>
-
     </div>
   );
 };

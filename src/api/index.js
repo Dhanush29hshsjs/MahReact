@@ -1,7 +1,7 @@
 import axios from "axios";
 import { Callbacks } from "jquery";
 
-const baseURL = "https://3c552736trial-dev-mahindra-sales-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/";
+const baseURL = "https://44f10b5ftrial-dev1-mahindra-sales-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/";
 
 const instance = axios.create({
   baseURL
@@ -41,20 +41,35 @@ else
 const data = await instance.get(url);
 return data.value || data;
 };
-export const getPurchaseRequestsByUUID = async (UUID)=>{
-let url =`PurchaseEnquiry?$filter=purchaseEnquiryUuid eq ${UUID} and IsActiveEntity eq true`;
-const data = await instance.get(url);
-return data.value || data;
+
+export const getPurchaseRequestsByUUID = async (UUID,objectPageParent)=>{
+  if(objectPageParent == "Order"){
+    let url =`PurchaseOrder?$filter=purchaseOrderUuid eq ${UUID} and IsActiveEntity eq true`;
+    const data = await instance.get(url);
+    return data.value || data;
+  }else{
+    let url =`PurchaseEnquiry?$filter=purchaseEnquiryUuid eq ${UUID} and IsActiveEntity eq true`;
+    const data = await instance.get(url);
+    return data.value || data;
+  }
+
 };
 export const getVehiclesInventory = async ()=>{
   let url =`VehicleInventory`;
   const data = await instance.get(url);
   return data.value || data;
   };
-  export const patchGeneralInfo = async (purchaseEnquiryUuid,body)=>{
-    let url =`PurchaseEnquiry(purchaseEnquiryUuid=${purchaseEnquiryUuid},IsActiveEntity=true)`;
+  export const patchGeneralInfo = async (purchaseEnquiryUuid,body,entity)=>{
+    if(entity == 'Order'){
+      let url =`PurchaseOrder(purchaseOrderUuid=${purchaseEnquiryUuid},IsActiveEntity=true)`;
     const data = await instance.patch(url,body);
     return data.value || data;
+    }else{
+      let url =`PurchaseEnquiry(purchaseEnquiryUuid=${purchaseEnquiryUuid},IsActiveEntity=true)`;
+      const data = await instance.patch(url,body);
+      return data.value || data;
+    }
+    
     };
     // export const deleteAndUpdRequestVehiclesByMaterialCode = async (initialRows,deletedRows,updatedRows,pageId)=>{
     //   try {
@@ -108,7 +123,7 @@ export const getVehiclesInventory = async ()=>{
             let row = updatedIds[i];
             let url = `PurchaseEnquiry(purchaseEnquiryUuid=${pageId},IsActiveEntity=true)/enquiryToVehicle(vehicleId=${row.uuid},IsActiveEntity=true)`;
             let updatedData = updatedRows.filter((updRow) => updRow.vehicleCode == row.vehicleCode);
-            let body = { quantity: updatedData[0].quantity ,partnerRole: updatedData[0].partnerRole,partnerNumber: updatedData[0].partnerNumber,discount:updatedData[0].discountpertype? updatedData[0].discount+"%":updatedData[0].discount,discountedPrice:updatedData[0].discountedPrice,totalPrice:updatedData[0].totalPrice};
+            let body = { quantity: updatedData[0].quantity ,partnerRole: updatedData[0].partnerRole,partnerNumber: updatedData[0].partnerNumber,discount:updatedData[0].discountpertype? updatedData[0].discount+"%":updatedData[0].discount,discountedPrice:updatedData[0].discountedPrice,totalPrice:updatedData[0].totalPrice,preferredDelDate:updatedData[0].preferredDelDate,preferredDelLocation:updatedData[0].preferredDelLocation};
             let updRes = await instance.patch(url, body);
             console.log(updRes);
           }
@@ -155,10 +170,17 @@ export const getVehiclesInventory = async ()=>{
       const data = await instance.delete(url);
       return data.value || data;
       };    
-    export const getRequestVehiclesByPurchaseEnquiryUuid = async (purchaseEnquiryUuid)=>{
-    let url =`EnquiryVehicle?$filter=purchaseEnquiryUuid eq ${purchaseEnquiryUuid}`;
-    const data = await instance.get(url);
-    return data.value || data;
+    export const getRequestVehiclesByPurchaseEnquiryUuid = async (purchaseEnquiryUuid,objectPageParent)=>{
+      if(objectPageParent == 'Order'){
+        let url =`PurchaseVehicle?$filter=purchaseOrderUuid eq ${purchaseEnquiryUuid}`;
+        const data = await instance.get(url);
+        return data.value || data;
+      }else{
+        let url =`EnquiryVehicle?$filter=purchaseEnquiryUuid eq ${purchaseEnquiryUuid}`;
+        const data = await instance.get(url);
+        return data.value || data;
+      }
+    
     };
     export const postPurchaseReq = async (customerId)=>{
       let url =`PurchaseEnquiry`;
@@ -171,10 +193,24 @@ export const getVehiclesInventory = async ()=>{
         const res = await instance.get(url);
         return res.value || res;
         };
-    export const getCommentsByPurchaseEnquiryUuid = async (purchaseEnquiryUuid)=>{
-      let url =`EnquiryComments?$filter=(purchaseEnquiryUuid eq ${purchaseEnquiryUuid} and customerId eq null)&$orderby=createdAt`;
+
+        export const createOrder = async (amount)=>{
+          let url =`createOrder(amount='${amount}')`;
+          const res = await instance.get(url);
+          return res.value || res.data.value;
+          };
+    export const getCommentsByPurchaseEnquiryUuid = async (purchaseEnquiryUuid,objectPageParent)=>{
+      if(objectPageParent == 'Object'){
+        let url =`PurchaseComments?$filter=(purchaseOrderUuid eq ${purchaseEnquiryUuid} and customerId eq null)&$orderby=createdAt`;
       const data = await instance.get(url);
       return data.value || data;
+      }
+      else{
+        let url =`EnquiryComments?$filter=(purchaseEnquiryUuid eq ${purchaseEnquiryUuid} and customerId eq null)&$orderby=createdAt`;
+        const data = await instance.get(url);
+        return data.value || data;
+      }
+      
       };
 export const getPurchaseOrdersByCustomerId = async (customerId,top)=>{
   var url;
@@ -230,12 +266,19 @@ export const uploadUserFile = async (field,file,filetype, id) => {
 
   
 };
-export const getFilesByPurchaseId = async (purchaseEnquiryUuid) => {
+export const getFilesByPurchaseId = async (purchaseEnquiryUuid,objectPageParent) => {
+  if(objectPageParent == 'Order'){
+    const url = `EnquiryFiles?$filter=purchaseOrderUuid eq ${purchaseEnquiryUuid}`;
+    const data = await instance.get(url);
+    
+   return  data.value || data;
+  }else{
+    const url = `EnquiryFiles?$filter=purchaseEnquiryUuid eq ${purchaseEnquiryUuid}`;
+    const data = await instance.get(url);
+    
+   return  data.value || data;
+  }
   
-  const url = `EnquiryFiles?$filter=purchaseEnquiryUuid eq ${purchaseEnquiryUuid}`;
-  const data = await instance.get(url);
-  
- return  data.value || data;;
 };
 export const getFilesByUrl = async (fileUrl) => {
   
@@ -267,6 +310,17 @@ export const postFilesPurchaseReq = async (body,file) => {
   
   
  return  data.data || data;;
+};
+export const getInvoiceOrBillByPurchaseOrderUUID = async (id,fileUrl) => {
+  const url = `PurchaseOrder(purchaseOrderUuid=${id},IsActiveEntity=true)/${fileUrl}`;
+  try {
+    const file = await instance.get(url,{ responseType: 'blob', headers: {
+      'Content-Type': 'application/json'
+  } });
+  return file.data;
+  } catch (error) {
+    
+  }
 };
 export const getUserFileByCustomerId = async (id) => {
   

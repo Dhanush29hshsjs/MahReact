@@ -13,14 +13,18 @@ import {
   import "../App.css";
 import { useNavigate } from 'react-router-dom';
 
-function MyAppBar() {
+function MyAppBar({scrollTodocsRef , scrollTonotificationsRef}) {
   const navigate = useNavigate();
   const goToUserProfile = ()=>{
-    navigate('/Profile');
+    let id = sessionStorage.getItem('cId'); 
+    navigate(`/Profile/${id}`);
   };
   const goToInquiry= () =>{
     navigate('/Inquiry');
   }
+  const goToOrders = () => {
+    navigate("/Orders");
+  };
   return (
 <AppBar position="static" className='appbarcss'>
   <Toolbar>
@@ -34,28 +38,30 @@ function MyAppBar() {
     </Button>
 
     {/* User Documents */}
-    <Button color="inherit" className="toolbar-button" style={{ position: 'relative' }}>
+    <Button color="inherit" onClick={scrollTodocsRef} className="toolbar-button" style={{ position: 'relative' }}>
       <Icon path={mdiFileDocument} size={1}   className="toolbar-button-icon"/>
       <span className="toolbar-button-text">User Documents</span>
      
     </Button>
 
-    {/* Purchase Orders */}
-    <Button color="inherit" onClick={goToInquiry} className="toolbar-button" style={{ position: 'relative' }}>
-      <Icon path={mdiCart} size={1}  className="toolbar-button-icon" />
-      <span className="toolbar-button-text">Purchase Orders</span>
- 
-    </Button>
-
-    {/* Purchase Requests */}
-    <Button color="inherit" className="toolbar-button" style={{ position: 'relative' }}>
+{/* Purchase Requests */}
+<Button color="inherit" onClick={goToInquiry} className="toolbar-button" style={{ position: 'relative' }}>
       <Icon path={mdiClipboardText} size={1} className="toolbar-button-icon" />
       <span className="toolbar-button-text">Purchase Requests</span>
 
     </Button>
 
+    {/* Purchase Orders */}
+    <Button color="inherit" onClick={goToOrders} className="toolbar-button" style={{ position: 'relative' }}>
+      <Icon path={mdiCart} size={1}  className="toolbar-button-icon" />
+      <span className="toolbar-button-text">Purchase Orders</span>
+ 
+    </Button>
+
+    
+
     {/* Notifications */}
-    <IconButton color="inherit" className="toolbar-button" style={{ position: 'relative' }}>
+    <IconButton color="inherit" onClick={scrollTonotificationsRef} className="toolbar-button" style={{ position: 'relative' }}>
       <Icon path={mdiBell} size={1}  className="toolbar-button-icon"/>
       <span className="toolbar-button-text">Notifications</span>
     

@@ -530,7 +530,7 @@ import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Dashboard from './pages/dashboard';
 import UserProfile from './pages/userProfile';
 import Orders from './pages/purchaseRequest';
-
+import POrders from './pages/purchaseOrder'
 import PrObjectPage from './pages/prObjPage';
 
 function App() {
@@ -543,7 +543,9 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/Profile/:cId" element={<UserProfile />} />
           <Route path="/Inquiry" element={<Orders />} />
+          <Route path="/Orders" element={<POrders />} />
           <Route path="/Inquiry/:id" element={<PrObjectPage />} />
+          <Route path="/Order/:id" element={<PrObjectPage />} />
           {/* <Route path="/contact" element={<ContactPage />} /> */}
         </Routes>
       </div>

@@ -15,6 +15,18 @@ align-content: center;
   background-color: #6950afb5;
   
 }
+.footertabO {
+  transition: transform 0.3s ease, border-bottom-style 0.9s ease;
+  border-radius: 20px;
+  backdrop-filter: blur(2px);
+  background-color: #800000ad;
+  
+}
+.footertabO:hover {
+  /* box-shadow: rgb(173 104 0 / 78%) 0px 3px 10px; */
+  border-bottom-style: double;
+  transform: translateX(-50%) scale(1.01) !important; 
+}
 [id*='prObjPageSectionButton'].footerbarbutton:hover{
   box-shadow: rgb(174 145 255) -3px -1px 10px, rgba(0, 0, 0, 1.66) 1px 5px 13px !important;
   transform: scale(1.04);
@@ -133,6 +145,17 @@ box-shadow:  0 8px 16px rgba(0, 0, 0, 0.2);
   
 }
 .prSection:hover{
+transform: scale(1.006);
+box-shadow: rgb(173 104 0 / 78%) 0px 0px 15px;
+}
+.prSectionO{
+  /* box-shadow: rgb(31, 31, 31) 0px 0px 15px; */
+  background-color: #fffbfb;
+  box-shadow:rgb(255 122 122) 0px 0px 15px;
+  transition: 0.2s transform,0.2s box-shadow;
+  
+}
+.prSectionO:hover{
 transform: scale(1.006);
 box-shadow: rgb(173 104 0 / 78%) 0px 0px 15px;
 }

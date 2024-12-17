@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   mdiCloudUpload,
@@ -51,7 +51,7 @@ import {
 // import { AppBar, Toolbar, Typography } from "@material-ui/core";
 
 const Dashboard = () => {
-  const email = "Pradeep@gmail.com";
+  const email = "pradeep@gmail.com";
   const password = "12345";
   sessionStorage.setItem('pass', password);
   
@@ -71,6 +71,7 @@ const Dashboard = () => {
     const fetchUserInfo = async () => {
       try {
         const data = await getUserByLoginCred(email, password); // Assumes getUserByLoginCred is an async function
+        
         if (data.length == 1) setUserInfo(data[0]);
         sessionStorage.setItem('cId', data[0].customerId);
         // alert(userInfo.name)
@@ -206,7 +207,7 @@ PO.Icon = mdiCancel;
       // setnotificationsLoader(true);
       const data = await getNotificationsByCustomerId(userInfo.customerId,30);
       data.data.value.forEach((notification) => {
-        switch (notification.commentsText.substring(11)) {
+        switch (notification.commentsText.substring(13)) {
           case "Negotiated Quotation":
             notification.icon = mdiTextBoxEditOutline;
             break;
@@ -330,6 +331,17 @@ PO.Icon = mdiCancel;
   const goToInquiry = () => {
     navigate("/Inquiry");
   };
+  const goToOrders = () => {
+    navigate("/Orders");
+  };
+  const notificationsRef = useRef(null);
+  const docsRef = useRef(null);
+  const scrollTonotificationsRef = () => {
+    notificationsRef.current.scrollIntoView({ behavior: 'smooth' });
+  };
+  const scrollTodocsRef = () => {
+    docsRef.current.scrollIntoView({ behavior: 'smooth' });
+  };
   return (
     <div className="appbackground">
       <video autoPlay loop muted className="video-background">
@@ -341,7 +353,7 @@ PO.Icon = mdiCancel;
       </video>
       <div className="video-backgroundOverlay"></div>
 
-      <MyAppBar></MyAppBar>
+      <MyAppBar scrollTodocsRef={scrollTodocsRef} scrollTonotificationsRef={scrollTonotificationsRef}></MyAppBar>
       {/* <AppBar ><Toolbar>
       </Toolbar></AppBar> */}
 
@@ -592,10 +604,10 @@ PO.Icon = mdiCancel;
               </section>
 
               {/* Purchase Orders */}
-              <section id="PurchaseOrdersS" className="dashboard-section">
+              <section onClick={goToOrders} id="PurchaseOrdersS" className="dashboard-section">
                 <div className="section-header">
                   <Icon path={mdiCart} size={1} color="#43a047" />
-                  <h2>Purchase Orders</h2>
+                  <h2>Purchase & Sales Orders</h2>
                 </div>
                 <div
                   className={`section-content ${
@@ -634,7 +646,7 @@ PO.Icon = mdiCancel;
                 </div>
               </section>
             </div>
-            <div className="notificationsDiv">
+            <div ref={notificationsRef} className="notificationsDiv">
               <div className="notificationsDivcontent">
                 <div
                   className="notificationsDivbar"
@@ -991,7 +1003,7 @@ PO.Icon = mdiCancel;
               </div>
             </section> */}
 
-              <section id="UploadSection" className="dashboard-sectionDocs">
+              <section ref={docsRef} id="UploadSection" className="dashboard-sectionDocs">
                 <div className="section-headerDocs">
                   <img
                     src={uploadimage}
