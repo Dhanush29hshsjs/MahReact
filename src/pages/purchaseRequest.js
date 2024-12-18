@@ -484,7 +484,7 @@ console.log(newRow);
         </Tabs>
       </AppBar>
       
-      {tabHidden == "0" && (      <div id="firstTab" >
+      {tabHidden == "0" && (      <div style={{minHeight: '100vh'}} id="firstTab" >
       <section  style={{ marginTop: "10vh", marginLeft: "15vh", marginRight: "15vh" }}>
         <div className="prSection"
             style={{
@@ -599,7 +599,7 @@ console.log(newRow);
       </div>)}
      
 
-        {tabHidden == "1" && (      <div id="secondTab" >
+        {tabHidden == "1" && (      <div style={{minHeight: '100vh'}} id="secondTab" >
       <section  style={{ marginTop: "10vh", marginLeft: "15vh", marginRight: "15vh" }}>
         <div className="prSection"
             style={{
@@ -691,7 +691,7 @@ console.log(newRow);
         </section>
       </div>)}
 
-      {tabHidden == "2" && (<div id="thirdTab" >
+      {tabHidden == "2" && (<div style={{minHeight: '100vh'}} id="thirdTab" >
         <section  style={{ marginTop: "10vh", marginLeft: "15vh", marginRight: "15vh" }}>
         <div className="prSection"
             style={{
@@ -783,7 +783,7 @@ console.log(newRow);
         </section>
       </div>)}
 
-      {tabHidden == "3" && (      <div id="fourthTab" >
+      {tabHidden == "3" && (      <div style={{minHeight: '100vh'}} id="fourthTab" >
       <section  style={{ marginTop: "10vh", marginLeft: "15vh", marginRight: "15vh" }}>
         <div className="prSection"
             style={{

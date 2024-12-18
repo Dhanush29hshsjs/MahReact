@@ -200,7 +200,7 @@ export const getVehiclesInventory = async ()=>{
           return res.value || res.data.value;
           };
     export const getCommentsByPurchaseEnquiryUuid = async (purchaseEnquiryUuid,objectPageParent)=>{
-      if(objectPageParent == 'Object'){
+      if(objectPageParent == 'Order'){
         let url =`PurchaseComments?$filter=(purchaseOrderUuid eq ${purchaseEnquiryUuid} and customerId eq null)&$orderby=createdAt`;
       const data = await instance.get(url);
       return data.value || data;

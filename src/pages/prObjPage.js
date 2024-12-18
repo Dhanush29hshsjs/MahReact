@@ -127,7 +127,7 @@ const [divisionSh,setDivisionSh]=useState([]);
 const [distriChSh,setDistriChSh]=useState([]);
 const [salesOrgSh,setSalesOrgSh]=useState([]);
 const [generalInfoData,setgeneralInfoData] = useState(generalInfoInitialData);
-const [comments,setComments] = useState(commentsInitial);
+const [comments,setComments] = useState('');
 const [commentHistory,setCommentHistory] = useState([]);
 const [pageState,setPageState] = useState("");
 
@@ -1403,7 +1403,7 @@ setGeneralInfoLoader(false);
               let body= JSON.stringify({ amount: parseFloat(generalInfoData.grandTotal),orderId:generalInfoData.rzpOrderId?generalInfoData.rzpOrderId:'' }); // Pass amount here
             
             const result =  await createOrder(body);
-            const orderId = result.orderId;
+            const orderId = result.orderId||result.id;
       
             // Razorpay options
             const options = {
@@ -1429,6 +1429,7 @@ setGeneralInfoLoader(false);
                 ondismiss: async function () {
                   alert("Payment was dismissed!");
                   await patchGeneralInfo(PageId,{rzpOrderId:orderId},objectPageParent);
+                  window.location.reload();
                 }
               }
             };
