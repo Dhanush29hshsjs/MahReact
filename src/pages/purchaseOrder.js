@@ -121,7 +121,7 @@ const testt = () => {
 const Orders = () => {
 
   const navigate = useNavigate();
-  const navtoObjPage = (ID)=>{
+  const navtoObjPage = (ID,id)=>{
     var title ='';
     if(tabHidden == '0')
       title = "Purchase Orders";
@@ -131,7 +131,7 @@ const Orders = () => {
           title = "Billing Statements";
         else
         title = "Rejected Orders";
-    navigate(`/Order/${ID}`, { state: {pageType:"Order",title:title}});
+    navigate(`/Order/${id}`, { state: {uuid:ID,pageType:"Order",title:title}});
   };
 
   useEffect(() => {
@@ -202,7 +202,7 @@ const Orders = () => {
         style={{ position: 'sticky', left: 0, background: 'white', zIndex: 1 }}
           className="stickyCell"
           onClick={() =>{
-            navtoObjPage(params.row.purchaseOrderUuid)}}
+            navtoObjPage(params.row.purchaseOrderUuid,params.row.purchaseOrderId)}}
           color="primary"
           aria-label="show row id"
         >
@@ -237,7 +237,7 @@ const Orders = () => {
         style={{ position: 'sticky', left: 0, background: 'white', zIndex: 1 }}
           className="stickyCell"
           onClick={() =>
-            navtoObjPage(params.row.purchaseOrderUuid)}
+            navtoObjPage(params.row.purchaseOrderUuid,params.row.purchaseOrderId)}
           color="primary"
           aria-label="show row id"
         >
@@ -284,7 +284,7 @@ const Orders = () => {
           rowsArr.push(newRow);
         else if(row.status == 'Rejected')
           RejectedOrderRowsArr.push(newRow);
-        else if(row.status == 'Payment Confirmed')
+        else if(row.status == 'Payment Confirmed' ||row.status == 'Credit Approved')
           invoicesRowsArr.push(newRow);
         else
         salesOrdersRowsArr.push(newRow);

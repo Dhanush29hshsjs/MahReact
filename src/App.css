@@ -19,6 +19,7 @@ align-content: center;
   transition: transform 0.3s ease, border-bottom-style 0.9s ease;
   border-radius: 20px;
   backdrop-filter: blur(2px);
+  
   background-color: #800000ad;
   
 }
@@ -809,4 +810,12 @@ scale: 1.2;
     border: 0.2rem solid #f1f1f1;
     
     overflow: hidden;
+}
+@keyframes scrollText {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
 }

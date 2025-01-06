@@ -118,8 +118,8 @@ const testt = () => {
 const Orders = () => {
 
   const navigate = useNavigate();
-  const navtoObjPage = (ID)=>{
-    navigate(`/Inquiry/${ID}`, { state: {pageType:"Request"}});
+  const navtoObjPage = (ID,id)=>{
+    navigate(`/Inquiry/${id}`, { state: {pageType:"Request",uuid:ID}});
   };
 
   useEffect(() => {
@@ -187,7 +187,7 @@ const Orders = () => {
         style={{ position: 'sticky', left: 0, background: 'white', zIndex: 1 }}
           className="stickyCell"
           onClick={() =>{
-            navtoObjPage(params.row.purchaseEnquiryUuid)}}
+            navtoObjPage(params.row.purchaseEnquiryUuid,params.row.purchaseEnquiryId)}}
           color="primary"
           aria-label="show row id"
         >
@@ -216,7 +216,7 @@ const Orders = () => {
         style={{ position: 'sticky', left: 0, background: 'white', zIndex: 1 }}
           className="stickyCell"
           onClick={() =>
-            navtoObjPage(params.row.purchaseEnquiryUuid)}
+            navtoObjPage(params.row.purchaseEnquiryUuid,'draft')}
           color="primary"
           aria-label="show row id"
         >
@@ -354,7 +354,7 @@ console.log(newRow);
   const newPurchaseReq = async ()=>{
     let res =await postPurchaseReq(sessionStorage.getItem('cId'));
     if(res.data){
-      navtoObjPage(res.data.purchaseEnquiryUuid);
+      navtoObjPage(res.data.purchaseEnquiryUuid,'newDraft');
     }
   }
 

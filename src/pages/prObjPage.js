@@ -168,7 +168,8 @@ const handleSelectionChange = (selection) => {
     else{
      objectPageParent="Request";
      pagetitle1='';}
-    const PageId = useParams().id;
+    // const PageId = useParams().id;
+    const PageId = prevPage.uuid;
     // if(pagetitle1 != "")
       // setPageTitle(pagetitle1);
     // if(pageidd.startsWith("Order")){
@@ -342,6 +343,7 @@ const handleSelectionChange = (selection) => {
           "van": custData.van,
           "address": custData.address,
           "status":pr.data.value[0].status,
+          "dueDate":pr.data.value[0].dueDate,
           "purchaseOrderUuid":pr.data.value[0].purchaseOrderUuid,
           "rzpOrderId":pr.data.value[0].rzpOrderId,
           "purchaseOrderId":pr.data.value[0].purchaseOrderId,
@@ -1384,6 +1386,8 @@ if (value === "") value = "0";
   // resolve();//testing
 // }, 4000);})//testing
 // await pr();//testing
+if(newStatus==='Credit Request')
+  setgeneralInfoData({...generalInfoData,status:'Credit Request'});
 setPageEditable(false);
 setGeneralInfoLoader(false);
         setVehiclesLoader(false);
@@ -1679,6 +1683,15 @@ setGeneralInfoLoader(false);
 return doctype+" ("+description.sHDescription+")";
         return ""
       }
+const displayCondition = (condition,condition2)=>{
+  let conditionRes = condition?'none':'flex';
+  if(!condition)
+    conditionRes = condition2?'none':'flex';
+  return conditionRes;
+}
+
+
+
     return (
         <div
     id="firstTab"
@@ -2584,7 +2597,7 @@ Close
 )}
 
 <div  className={objectPageParent == 'Order'?'footertabO':"footertab"} style={ {  
-    
+    justifyContent:pagetitle1 == 'Sales Orders'? 'space-between !important':'auto',
     padding: '15px',
     zIndex: '1',
     position: 'fixed',
@@ -2594,8 +2607,28 @@ Close
     transform: 'translateX(-50%)',
     display:(pageState=='In Process')?(pagetitle1 == 'Sales Orders'||pagetitle1 == 'Billing Statements')?'flex':'none':'flex',
     placeContent: 'end'}}>
+      {(pagetitle1 == 'Sales Orders' && ( generalInfoData.status != 'Paid')) && <div style={{     background: 'mistyrose',   width: '65%',
+        marginLeft: 'auto',    borderStyle: 'ridge',
+        borderRadius: '12px',
+        alignContent: 'center',marginRight: 'auto',  overflow: 'hidden' }}>
+    <span 
+  style={{
+    color: '#ff0000',
+    display: 'inline-block',
+    whiteSpace: 'nowrap',
+    animation: 'scrollText 18s linear infinite',
+    width: 'inherit'
+  }}
+>
+  {generalInfoData.status === 'Payment Overdue' 
+    ? 'Your payment is overdue. Click on "Request for Credit" to request credit approval.' 
+    : generalInfoData.status == 'Credit Request'?'Waiting for Credit Approval, Please be patient.':`Don’t let the due date slip by! Please make your payment on or before [${generalInfoData.dueDate}].`}
+</span>
+
+  </div>}
    {(updated||pagetitle1 == 'Sales Orders'||pagetitle1 == 'Billing Statements') ? (
 <div style={{gap:'10px' ,display:'flex',flexDirection:'row'}}>
+  
   {(generalInfoData.status == 'Paid'||generalInfoData.status == 'Confirmed'||generalInfoData.status == 'Details Sent')?<span style={{color:"white"}}>Waiting for Payment Approval.</span>:<>
   <button onClick={async()=>{let res = await getInvoiceOrBillByPurchaseOrderUUID(PageId,'invoice');
    window.open(URL.createObjectURL(res), '_blank');
@@ -2623,9 +2656,11 @@ Close
         marginLeft: '10px'}}>View Bill</span></button>
 
    <button className="footerbarbutton" 
-   onClick={()=>requestQuotation(pageState=='Draft'?'Create Request':pagetitle1 == 'Sales Orders'?'Paid':'Negotiation')}
+
+   onClick={()=>requestQuotation(pageState=='Draft'?'Create Request':pagetitle1 == 'Sales Orders'?generalInfoData.status == 'Payment Overdue'?'Credit Request':'Paid':'Negotiation')}
    style={{   
-    display:pagetitle1 == 'Billing Statements'?'none':'flex',
+    display:displayCondition(pagetitle1 == 'Billing Statements' , generalInfoData.status == 'Credit Request'),
+    
      padding: '10px' ,
        borderRadius: '10px',
        border: 'none',
@@ -2635,7 +2670,7 @@ Close
        }}> <Icon path={pageState=='Draft'?mdiSendOutline:pagetitle1 == 'Sales Orders'?mdiAccountCreditCardOutline:mdiForumOutline} size={1} color='white'></Icon> <span style={{    fontFamily: 'auto',
        fontSize: 'x-large',
        color: 'white',
-       marginLeft: '10px'}}>{pageState=='Draft'?'Request Quotation':pagetitle1 == 'Sales Orders'?'Make Payment':'Negotiate'}  </span></button></>}
+       marginLeft: '10px'}}>{pageState=='Draft'?'Request Quotation':pagetitle1 == 'Sales Orders'?generalInfoData.status == 'Payment Overdue'?'Request for Credit':'Make Payment':'Negotiate'}  </span></button></>}
  
   <button className="footerbarbutton" 
 onClick={()=>requestQuotation('Approved')}
