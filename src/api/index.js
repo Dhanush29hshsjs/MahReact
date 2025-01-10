@@ -123,7 +123,7 @@ export const getVehiclesInventory = async ()=>{
             let row = updatedIds[i];
             let url = `PurchaseEnquiry(purchaseEnquiryUuid=${pageId},IsActiveEntity=true)/enquiryToVehicle(vehicleId=${row.uuid},IsActiveEntity=true)`;
             let updatedData = updatedRows.filter((updRow) => updRow.vehicleCode == row.vehicleCode);
-            let body = { quantity: updatedData[0].quantity ,partnerRole: updatedData[0].partnerRole,partnerNumber: updatedData[0].partnerNumber,discount:updatedData[0].discountpertype? updatedData[0].discount+"%":updatedData[0].discount,discountedPrice:updatedData[0].discountedPrice,totalPrice:updatedData[0].totalPrice,preferredDelDate:updatedData[0].preferredDelDate,preferredDelLocation:updatedData[0].preferredDelLocation};
+            let body = { quantity: updatedData[0].quantity ,discount:updatedData[0].discountpertype? updatedData[0].discount+"%":updatedData[0].discount,discountedPrice:updatedData[0].discountedPrice,totalPrice:updatedData[0].totalPrice,preferredDelDate:updatedData[0].preferredDelDate,preferredDelLocation:updatedData[0].preferredDelLocation};
             let updRes = await instance.patch(url, body);
             console.log(updRes);
           }
@@ -156,7 +156,7 @@ export const getVehiclesInventory = async ()=>{
     
           for (let i = 0; i < vehicles.length; i++) {
             let vehicle = vehicles[i];
-            let body = { materialCode: vehicle.vehicleCode, quantity: vehicle.quantity,partnerRole:vehicle.partnerRole,partnerNumber:vehicle.partnerNumber, IsActiveEntity: true };
+            let body = { materialCode: vehicle.vehicleCode, quantity: vehicle.quantity, IsActiveEntity: true };
             let postRes = await instance.post(url, body);
             console.log(postRes);
           }
@@ -170,6 +170,18 @@ export const getVehiclesInventory = async ()=>{
       const data = await instance.delete(url);
       return data.value || data;
       };    
+      export const getPartnersByPurchaseUuid = async (purchaseEnquiryUuid,objectPageParent)=>{
+        if(objectPageParent == 'Order'){
+          let url =`PurchasePartners?$filter=purchaseOrderUuid eq ${purchaseEnquiryUuid}`;
+          const data = await instance.get(url);
+          return data.value || data;
+        }else{
+          let url =`EnquiryPartners?$filter=purchaseEnquiryUuid eq ${purchaseEnquiryUuid}`;
+          const data = await instance.get(url);
+          return data.value || data;
+        }
+      
+      };
     export const getRequestVehiclesByPurchaseEnquiryUuid = async (purchaseEnquiryUuid,objectPageParent)=>{
       if(objectPageParent == 'Order'){
         let url =`PurchaseVehicle?$filter=purchaseOrderUuid eq ${purchaseEnquiryUuid}`;
@@ -193,6 +205,17 @@ export const getVehiclesInventory = async ()=>{
         const res = await instance.get(url);
         return res.value || res;
         };
+
+        export const getPartnersSh = async (salesOrg,distributionChannels,division)=>{
+          let url =`getPartnersSh(paramaters='{"division":"${division}","distributionChannels":"${distributionChannels}","salesOrg":"${salesOrg}"}')`;
+          const res = await instance.get(url);
+          return res.value || res;
+          };
+          export const patchPartnersRows = async (purchaseEnquiryUuid,partnerRole,body)=>{
+            let url =`PurchaseEnquiry(purchaseEnquiryUuid=${purchaseEnquiryUuid},IsActiveEntity=true)/enquiryToPartners(purchaseEnquiryUuid=${purchaseEnquiryUuid},partnerRole='${partnerRole}',IsActiveEntity=true)`;
+            const res = await instance.patch(url,body);
+            return res.value || res;
+            };
 
         export const createOrder = async (amount)=>{
           let url =`createOrder(amount='${amount}')`;

@@ -35,6 +35,7 @@ import {
   mdiAccountCreditCardOutline,
   mdiInvoiceListOutline,
   mdiReceiptTextCheckOutline,
+  mdiHandshakeOutline,
 } from "@mdi/js";
 import 'react-vertical-timeline-component/style.min.css';
 import Icon from "@mdi/react";
@@ -45,16 +46,18 @@ import "../App.css";
 import mahLogo from "../mahindra-logo-new.webp";
 import { DataGrid, renderEditInputCell, renderEditSingleSelectCell } from "@material-ui/data-grid";
 import { VerticalTimeline, VerticalTimelineElement } from "react-vertical-timeline-component";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { json, useLocation, useNavigate, useParams } from "react-router-dom";
 import { SpinnerCircularSplit, SpinnerDiamond, SpinnerInfinity, SpinnerRomb } from "spinners-react";
-import { createOrder, deleteAndUpdRequestVehiclesByMaterialCode, deleteFiles, deletePurchaseRequestByUUID, deleteRequestVehiclesByMaterialCode, getCommentsByPurchaseEnquiryUuid, getFilesByPurchaseId, getFilesByUrl, getInvoiceOrBillByPurchaseOrderUUID, getPurchaseRequestsByCustomerId, getPurchaseRequestsByUUID, getRequestVehiclesByPurchaseEnquiryUuid, getSh, getUserById, getVehiclesInventory, patchGeneralInfo, postFilesPurchaseReq, postRequestVehiclesByMaterialCode } from "../api";
+import { createOrder, deleteAndUpdRequestVehiclesByMaterialCode, deleteFiles, deletePurchaseRequestByUUID, deleteRequestVehiclesByMaterialCode, getCommentsByPurchaseEnquiryUuid, getFilesByPurchaseId, getFilesByUrl, getInvoiceOrBillByPurchaseOrderUUID, getPartnersByPurchaseUuid, getPartnersSh, getPurchaseRequestsByCustomerId, getPurchaseRequestsByUUID, getRequestVehiclesByPurchaseEnquiryUuid, getSh, getUserById, getVehiclesInventory, patchGeneralInfo, patchPartnersRows, postFilesPurchaseReq, postRequestVehiclesByMaterialCode } from "../api";
 
 
 
 
 
 var initialRowsCopy;
+var partnerRowsInitial=[];
 var initialItems = [];
+let vehicleShInitial=[];
 var initialRows = [];
 var initialRows1 = [];
 var generalInfoInitialData ={};
@@ -68,6 +71,7 @@ const PrObjectPage = ()=>{
 const[pageTitle,setPageTitle]=useState('');
 const[generalInfoLoader,setGeneralInfoLoader]=useState(true);
 const[vehiclesLoader,setVehiclesLoader]=useState(true);
+const[partnersLoader,setPartnersLoader]=useState(true);
 const[attachmentsLoader,setAttachmentsLoader]=useState(true);
 const [updated,setUpdated]=useState(true);   
 // const updated = false;
@@ -92,32 +96,32 @@ const[vehiclesShSalesorgAndDistrichnl,setVehiclesShSalesorgAndDistrichnl]=useSta
 const [vehiclesShSelectedRows,setVehiclesShSelectedRows]=useState([]);
 const [vehiclesShDialog,setVehiclesShDialog]=useState(false);
 
-const [partnersSh,setPartnersSh]=useState([]);
-const[partnersShSalesorgAndDistrichnlAndDiv,setPartnersShSalesorgAndDistrichnlAndDiv]=useState({
-  items: [
-    {
-      id:1,
-      columnField: "sHField2", // Field to filter
-      operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
-      value:' ',        // Default filter value
-    },
-    {
-      id:2,
-      columnField: "sHId2", // Field to filter
-      operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
-      value:' ',        // Default filter value
-    },
-    {
-      id:3,
-      columnField: "sHDescription2", // Field to filter
-      operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
-      value:' ',        // Default filter value
-    },
-  ],
-})
+// const [paartnersSh,setPaartnersSh]=useState([]);
+// const[paartnersShSalesorgAndDistrichnlAndDiv,setPaartnersShSalesorgAndDistrichnlAndDiv]=useState({
+//   items: [
+//     {
+//       id:1,
+//       columnField: "sHField2", // Field to filter
+//       operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+//       value:' ',        // Default filter value
+//     },
+//     {
+//       id:2,
+//       columnField: "sHId2", // Field to filter
+//       operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+//       value:' ',        // Default filter value
+//     },
+//     {
+//       id:3,
+//       columnField: "sHDescription2", // Field to filter
+//       operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+//       value:' ',        // Default filter value
+//     },
+//   ],
+// })
 
-const [partnersShDialog,setPartnersShDialog]=useState(false);
-const [partnersSelectedRow,setPartnersSelectedRow]=useState(null);
+// const [paartnersShDialog,setPaartnersShDialog]=useState(false);
+// const [paartnersSelectedRow,setPaartnersSelectedRow]=useState(null);
 
 const [commonShSelected,setCommonShSelected]=useState(null);
 const [commonShSelectedField,setCommonShSelectedField]=useState(null);
@@ -381,24 +385,27 @@ const handleSelectionChange = (selection) => {
         vehicleInvData.data.value.forEach((element,index) => {
           let vhData ={id:index,vehicleCode:element.vehicleCode,distributionChnl:element.distributionChnl,salesOrg:element.salesOrg,vehicleName:element.vehicleName,vehicleColor:element.vehicleColor,quantity:1};
           vehicleInvDataSh.push(vhData);
+          if(!vehicleShInitial.some((veh)=>veh.id == index)){
+            vehicleShInitial.push(vhData);
+          }
         });
         setVehiclesSh(vehicleInvDataSh);
 
-        let partnersData = await getSh('Partners');
+        // let paartnersData = await getSh('Paartners');
         let salesOrgData = await getSh('Sales Organisation');
         let distriChData = await getSh('Distribution Channel');
         let divisionData = await getSh('Division');
         let docTypeData = await getSh('Document Type');
-        let partnersDataSh = [], 
-    salesOrgDataSH = [], 
+        // let paartnersDataSh = [], 
+    let salesOrgDataSH = [], 
     distriChDataSH = [], 
     divisionDataSH = [], 
     docTypeDataSH = [];
 
-        partnersData.data.value.forEach((element,index) => {
-          let ptData ={id:index,sHKey:element.sHKey,sHField:element.sHField,sHId:element.sHId,sHDescription:element.sHDescription,sHField2:element.sHField2,sHId2:element.sHId2,sHDescription2:element.sHDescription2};
-          partnersDataSh.push(ptData);
-        });
+        // paartnersData.data.value.forEach((element,index) => {
+        //   let ptData ={id:index,sHKey:element.sHKey,sHField:element.sHField,sHId:element.sHId,sHDescription:element.sHDescription,sHField2:element.sHField2,sHId2:element.sHId2,sHDescription2:element.sHDescription2};
+        //   paartnersDataSh.push(ptData);
+        // });
         salesOrgData.data.value.forEach((element,index) => {
           let ptData ={id:index,sHKey:element.sHKey,sHField:element.sHField,sHId:element.sHId,sHDescription:element.sHDescription,sHField2:element.sHField2,sHId2:element.sHId2,sHDescription2:element.sHDescription2};
           salesOrgDataSH.push(ptData);
@@ -415,7 +422,8 @@ const handleSelectionChange = (selection) => {
           let ptData ={id:index,sHKey:element.sHKey,sHField:element.sHField,sHId:element.sHId,sHDescription:element.sHDescription};
           docTypeDataSH.push(ptData);
         });
-        setPartnersSh(partnersDataSh);setSalesOrgSh(salesOrgDataSH);setDistriChSh(distriChDataSH);setDivisionSh(divisionDataSH);setDocTypeSh(docTypeDataSH);
+        // setPaartnersSh(paartnersDataSh);
+        setSalesOrgSh(salesOrgDataSH);setDistriChSh(distriChDataSH);setDivisionSh(divisionDataSH);setDocTypeSh(docTypeDataSH);
 
 
         setVehiclesLoader(false);
@@ -430,7 +438,7 @@ const handleSelectionChange = (selection) => {
       let initialRowsLet =[];
       console.log(requestVehicleData)
       requestVehicleData.data.value.forEach((vehileData,index)=>{
-        initialRowsLet.push({id:(index+1),vehicleCode:vehileData.materialCode,distributionChnl:generalInfoInitialData.distributionChannel ,salesOrg:generalInfoInitialData.salesOrg,vehicleName:vehileData.vehicleName,vehicleColor:vehileData.vehicleColor,quantity:vehileData.quantity,uuid:vehileData.vehicleId,partnerNumber:vehileData.partnerNumber,partnerRole:vehileData.partnerRole,pricePerUnit:vehileData.pricePerUnit,actualPrice:vehileData.actualPrice,band:vehileData.band,discount:vehileData.discount.replace(/[^0-9.]/g, ""),discountpertype:vehileData.discount.includes('%'),discountedPrice:vehileData.discountedPrice,taxPercentage:vehileData.taxPercentage,totalPrice:vehileData.totalPrice,delId:vehileData.delId,preferredDelDate:vehileData.preferredDelDate,preferredDelLocation:vehileData.preferredDelLocation,delDate:vehileData.delDate?vehileData.delDate:null,delLocation:vehileData.delLocation?vehileData.delLocation:null,transportMode:vehileData.transportMode?vehileData.transportMode:null});
+        initialRowsLet.push({id:(index+1),vehicleCode:vehileData.materialCode,distributionChnl:generalInfoInitialData.distributionChannel ,salesOrg:generalInfoInitialData.salesOrg,vehicleName:vehileData.vehicleName,vehicleColor:vehileData.vehicleColor,quantity:vehileData.quantity,uuid:vehileData.vehicleId,pricePerUnit:vehileData.pricePerUnit,actualPrice:vehileData.actualPrice,band:vehileData.band,discount:vehileData.discount.replace(/[^0-9.]/g, ""),discountpertype:vehileData.discount.includes('%'),discountedPrice:vehileData.discountedPrice,taxPercentage:vehileData.taxPercentage,totalPrice:vehileData.totalPrice,delId:vehileData.delId,preferredDelDate:vehileData.preferredDelDate,preferredDelLocation:vehileData.preferredDelLocation,delDate:vehileData.delDate?vehileData.delDate:null,delLocation:vehileData.delLocation?vehileData.delLocation:null,transportMode:vehileData.transportMode?vehileData.transportMode:null});
       })
       initialRows=initialRowsLet;
     //   initialRows = [
@@ -448,7 +456,46 @@ const handleSelectionChange = (selection) => {
         initialRows1.push(row);
         console.log(row);
       });
-     
+      let getInitialPartners = await getPartnersByPurchaseUuid(PageId,objectPageParent);
+      let initialPartners = [];
+      getInitialPartners.data.value.forEach((partnersData,index)=>{
+        let role ='';
+        let id=0;
+        switch (partnersData.partnerRole) {
+          case 'SP':
+            role ='Sold-To Party';
+            id=1;
+            break;
+            case 'SH':
+            role ='Ship-To Party';
+            id=2;
+            break;
+            case 'PY':
+            role ='Payer';
+            id=3;
+            break;
+            case 'BP':
+            role ='Bill-To Party';
+            id=4;
+            break;
+        
+          default:
+            break;
+        }
+        initialPartners.push({id:id,partnerRole:role,partnerNumber:partnersData.partnerNumber ,partnerName:partnersData.partnerName});
+        if(!partnerRowsInitial.some((partner)=>partner.id == id))
+        partnerRowsInitial.push({id:id,partnerRole:role,partnerNumber:partnersData.partnerNumber ,partnerName:partnersData.partnerName});
+      })
+      initialPartners.sort((a, b) => a.id - b.id);
+      partnerRowsInitial.sort((a, b) => a.id - b.id);
+    //   let initialPartners = [
+    //   {id:1,partnerRole:'Sold-To Party',partnerNumber:'0000000001'},
+    //   {id:2,partnerRole:'Ship-To Party',partnerNumber:'0000000002'},
+    //   {id:3,partnerRole:'Payer',partnerNumber:'0000000003'},
+    //   {id:4,partnerRole:'Bill-To Party',partnerNumber:'0000000003'}
+    // ];
+    setPartnerRows(initialPartners);
+    setPartnersLoader(false);
 let FilesData = await getFilesByPurchaseId(PageId,objectPageParent);
 let initialItemsCopy = [];
 // FilesData.data.value.forEach(async (file,index)=>{
@@ -586,7 +633,15 @@ if(initialItems == null ||initialItems == undefined)
               setErrors((prev) => ({ ...prev, [id]: true }));
             }
           };
-        
+          const partnerColumns = [
+            {  minWidth: 150 ,field: "partnerRole", headerName: "Partner Role", flex: 1 },
+            { field: "partnerNumber", headerName: "Partner Number", flex: 1  ,minWidth: 250 },
+            { field: "partnerName", headerName: "Partner Name", flex: 1  ,minWidth: 350 }
+          ]    
+          const partnerShColumns = [
+            { field: "partnerNumber", headerName: "Partner Number", flex: 1  ,minWidth: 350 },
+            { field: "partnerName", headerName: "Partner Name", flex: 1  ,minWidth: 350 }
+          ]    
     const columns = [
         { field: "vehicleCode", headerName: "Vehicle Code", minWidth: 300 },
         // { field: "DocType", headerName: "DocType", flex: 1 ,editable: true ,renderEditCell :(params) =>  <EditDropdownCell {...params} /> ,minWidth: 250 },
@@ -648,36 +703,7 @@ if(initialItems == null ||initialItems == undefined)
             );
           }:undefined,
         },
-        { field: "partnerRole", renderCell: (params) =>{
-          const hasError = params.value?false:true;
-          return (
-            <>
-            {pageState == 'Draft'?(  <TextField
-              value={params.value || ""}
-              onClick={()=>handlePartnersShOpen(params.id)}
-              error={hasError}
-              helperText={hasError ? "* Required" : ""}
-              variant="standard"
-              style={{ width: "100%" }}
-            />):(<div>{params.value}</div>)}
-            </>
-          );},  headerName: "Partner Role", flex: 1  ,minWidth: 350 },
-        { field: "partnerNumber", renderCell: (params) =>{
-          const hasError = params.value?false:true;
-          return (
-            <>
-            {pageState == 'Draft'?(
-              <TextField
-                value={params.value || ""}
-                onClick={()=>handlePartnersShOpen(params.id)}
-                error={hasError}
-                helperText={hasError ? "* Required" : ""}
-                variant="standard"
-                style={{ width: "100%" }}
-              />):(<div>{params.value}</div>)}
-              </>
-            // </div>
-          );}, headerName: "Partner Number", flex: 1  ,minWidth: 350 },
+        
 
 
           {hide:(pageState == 'Quotation'||parseFloat(generalInfoInitialData.grandTotal)>0)?false:true, field: "pricePerUnit", headerName: "Price per Unit.", flex: 1  ,minWidth: 350 },
@@ -1058,15 +1084,15 @@ if (value === "") value = "0";
         { field: "sHId", headerName: "Code", flex: 1  },
         { field: "sHDescription", headerName: "Name", flex: 1  },
       ];
-      const columnsPartnersSh = [
-        { field: "sHKey",hide:true, headerName: "Vehicle Code", flex: 1  },
-        { field: "sHField",hide:true, headerName: "Vehicle Name", flex: 1  },
-        { field: "sHId", headerName: "Role", flex: 1  },
-        { field: "sHDescription", headerName: "Number", flex: 1  },
-        { field: "sHField2", headerName: "Sales Org.", flex: 1,hide:true  },
-        { field: "sHId2", headerName: "Distri Chanel", flex: 1,hide:true  },
-        { field: "sHDescription2", headerName: "Division", flex: 1,hide:true  },
-      ];
+      // const columnsPaartnersSh = [
+      //   { field: "sHKey",hide:true, headerName: "Vehicle Code", flex: 1  },
+      //   { field: "sHField",hide:true, headerName: "Vehicle Name", flex: 1  },
+      //   { field: "sHId", headerName: "Role", flex: 1  },
+      //   { field: "sHDescription", headerName: "Number", flex: 1  },
+      //   { field: "sHField2", headerName: "Sales Org.", flex: 1,hide:true  },
+      //   { field: "sHId2", headerName: "Distri Chanel", flex: 1,hide:true  },
+      //   { field: "sHDescription2", headerName: "Division", flex: 1,hide:true  },
+      // ];
      
       const handeSave = async () =>{
         setAttachmentsLoader(true);
@@ -1111,6 +1137,85 @@ if (value === "") value = "0";
           }
           setGeneralInfoLoader(false);
           }
+          if(!_.isEqual(partnerRows, partnerRowsInitial)){
+            try {
+              setPartnersLoader(true);
+              for(let i=0;i<partnerRows.length;i++){
+                let match =false;
+                for(let j=0;j<partnerRowsInitial.length;j++){
+                  if(partnerRowsInitial[j].partnerRole == partnerRows[i].partnerRole && partnerRowsInitial[j].partnerNumber == partnerRows[i].partnerNumber && partnerRowsInitial[j].partnerName == partnerRows[i].partnerName){
+                    match = true;
+                    break;
+                  }
+                }
+                if(!match){
+                  let role ='';
+                  switch (partnerRows[i].partnerRole) {
+                    case 'Sold-To Party':
+                      role ='SP';
+                      break;
+                      case 'Ship-To Party':
+                      role ='SH';
+                      break;
+                      case 'Payer':
+                      role ='PY';
+                      break;
+                      case 'Bill-To Party':
+                      role ='BP';
+                      break;
+                  
+                    default:
+                      break;
+                  }
+                 await patchPartnersRows(PageId,role,{partnerName:partnerRows[i].partnerName ,partnerNumber:partnerRows[i].partnerNumber});
+                }
+                }
+                let getInitialPartners = await getPartnersByPurchaseUuid(PageId,objectPageParent);
+                let initialPartners = [];
+                partnerRowsInitial=[];
+                getInitialPartners.data.value.forEach((partnersData,index)=>{
+                  let role ='';
+                  let id=0;
+                  switch (partnersData.partnerRole) {
+                    case 'SP':
+                      role ='Sold-To Party';
+                      id=1;
+                      break;
+                      case 'SH':
+                      role ='Ship-To Party';
+                      id=2;
+                      break;
+                      case 'PY':
+                      role ='Payer';
+                      id=3;
+                      break;
+                      case 'BP':
+                      role ='Bill-To Party';
+                      id=4;
+                      break;
+                  
+                    default:
+                      break;
+                  }
+                  initialPartners.push({id:id,partnerRole:role,partnerNumber:partnersData.partnerNumber ,partnerName:partnersData.partnerName});
+                  if(!partnerRowsInitial.some((partner)=>partner.id == id))
+                  partnerRowsInitial.push({id:id,partnerRole:role,partnerNumber:partnersData.partnerNumber ,partnerName:partnersData.partnerName});
+                })
+                initialPartners.sort((a, b) => a.id - b.id);
+                partnerRowsInitial.sort((a, b) => a.id - b.id);
+              //   let initialPartners = [
+              //   {id:1,partnerRole:'Sold-To Party',partnerNumber:'0000000001'},
+              //   {id:2,partnerRole:'Ship-To Party',partnerNumber:'0000000002'},
+              //   {id:3,partnerRole:'Payer',partnerNumber:'0000000003'},
+              //   {id:4,partnerRole:'Bill-To Party',partnerNumber:'0000000003'}
+              // ];
+              setPartnerRows(initialPartners);
+              setPartnersLoader(false);
+            } catch (error) {
+              console.log(error)
+            }
+            setPartnersLoader(false);
+          }
           if(!_.isEqual(rows, initialRows)){
             try {
               setVehiclesLoader(true);
@@ -1120,7 +1225,7 @@ if (value === "") value = "0";
               // let updatedRows = rows.filter((row)=>initialRows.some((iRow)=>iRow.vehicleCode== row.vehicleCode ));
               let updatedRows = rows.filter((row) => 
                 initialRows1.some((iRow) => 
-                  (iRow.vehicleCode == row.vehicleCode && (iRow.quantity != row.quantity ||iRow.partnerRole != row.partnerRole ||iRow.partnerNumber != row.partnerNumber||iRow.discount != row.discount||iRow.discountedPrice != row.discountedPrice||iRow.totalPrice != row.totalPrice||iRow.discount != row.discount||iRow.discountpertype != row.discountpertype||iRow.preferredDelDate != row.preferredDelDate||iRow.preferredDelLocation != row.preferredDelLocation))
+                  (iRow.vehicleCode == row.vehicleCode && (iRow.quantity != row.quantity ||iRow.discount != row.discount||iRow.discountedPrice != row.discountedPrice||iRow.totalPrice != row.totalPrice||iRow.discount != row.discount||iRow.discountpertype != row.discountpertype||iRow.preferredDelDate != row.preferredDelDate||iRow.preferredDelLocation != row.preferredDelLocation))
                 )
               );
 
@@ -1137,7 +1242,7 @@ if (value === "") value = "0";
               let initialRowsLet =[];
               console.log(requestVehicleData)
               requestVehicleData.data.value.forEach((vehileData,index)=>{
-                initialRowsLet.push({id:(index+1),vehicleCode:vehileData.materialCode,distributionChnl:generalInfoInitialData.distributionChannel ,salesOrg:generalInfoInitialData.salesOrg,vehicleName:vehileData.vehicleName,vehicleColor:vehileData.vehicleColor,quantity:vehileData.quantity,uuid:vehileData.vehicleId,partnerNumber:vehileData.partnerNumber,partnerRole:vehileData.partnerRole,pricePerUnit:vehileData.pricePerUnit,actualPrice:vehileData.actualPrice,band:vehileData.band,discount:vehileData.discount.replace(/[^0-9.]/g, ""),discountpertype:vehileData.discount.includes('%'),discountedPrice:vehileData.discountedPrice,taxPercentage:vehileData.taxPercentage,totalPrice:vehileData.totalPrice,delId:vehileData.delId,preferredDelDate:vehileData.preferredDelDate,preferredDelLocation:vehileData.preferredDelLocation,delDate:vehileData.delDate?vehileData.delDate:null,delLocation:vehileData.delLocation?vehileData.delLocation:null,transportMode:vehileData.transportMode?vehileData.transportMode:null});
+                initialRowsLet.push({id:(index+1),vehicleCode:vehileData.materialCode,distributionChnl:generalInfoInitialData.distributionChannel ,salesOrg:generalInfoInitialData.salesOrg,vehicleName:vehileData.vehicleName,vehicleColor:vehileData.vehicleColor,quantity:vehileData.quantity,uuid:vehileData.vehicleId,pricePerUnit:vehileData.pricePerUnit,actualPrice:vehileData.actualPrice,band:vehileData.band,discount:vehileData.discount.replace(/[^0-9.]/g, ""),discountpertype:vehileData.discount.includes('%'),discountedPrice:vehileData.discountedPrice,taxPercentage:vehileData.taxPercentage,totalPrice:vehileData.totalPrice,delId:vehileData.delId,preferredDelDate:vehileData.preferredDelDate,preferredDelLocation:vehileData.preferredDelLocation,delDate:vehileData.delDate?vehileData.delDate:null,delLocation:vehileData.delLocation?vehileData.delLocation:null,transportMode:vehileData.transportMode?vehileData.transportMode:null});
               })
               initialRows=initialRowsLet;
             
@@ -1355,11 +1460,12 @@ if (value === "") value = "0";
           console.log(razorpay_payment_id);
         setGeneralInfoLoader(true);
         setVehiclesLoader(true);
+        setPartnersLoader(true);
         setAttachmentsLoader(true);
         var errString="";
         if(rows.length == 0)
           errString+= "\n-> Please select atlesat 1 item to request for quotation";
-        if(rows.some((row)=>(!row.partnerRole ||!row.partnerNumber||!row.preferredDelDate||!row.preferredDelLocation)))
+        if(rows.some((row)=>(!row.preferredDelDate||!row.preferredDelLocation)))
           errString+= "\n-> Mandatory fields to be filled in List Of Items";
           if(items.length == 0)
             errString+= "\n-> Attachments are mandatory ";
@@ -1371,6 +1477,7 @@ if (value === "") value = "0";
           alert(errString);
           setGeneralInfoLoader(false);
         setVehiclesLoader(false);
+        setPartnersLoader(false);
         setAttachmentsLoader(false);
         return;
         }
@@ -1391,6 +1498,7 @@ if(newStatus==='Credit Request')
 setPageEditable(false);
 setGeneralInfoLoader(false);
         setVehiclesLoader(false);
+        setPartnersLoader(false);
         setAttachmentsLoader(false);
             setPageState("In Process");
             resolve();//deploy
@@ -1463,6 +1571,11 @@ setGeneralInfoLoader(false);
     else
         rowInitialInput = initialRows;
     const [rows,setRows] = useState(rowInitialInput);
+    const [partnersShDialog,setPartnersShDialog]=useState(false);
+    const [partnersShFor,setPartnersShFor]=useState(0);
+    const [partnersSh,setPartnersSh]=useState([]);
+    
+    const [partnerRows,setPartnerRows] = useState([]);
     const [selectedRows,setSelectedRows] = useState([]);
     useEffect(()=>{
       let updatedVehicleSh= vehiclesSh.filter((vSh)=>!rows.some((row) => row.vehicleCode === vSh.vehicleCode));
@@ -1540,28 +1653,7 @@ setGeneralInfoLoader(false);
           setDistriChSh(formatArray(distriChShData));
          
         }
-        setPartnersShSalesorgAndDistrichnlAndDiv({
-          items: [
-            {
-              id:1,
-              columnField: "sHField2", // Field to filter
-              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
-              value:generalInfoData.salesOrg?generalInfoData.salesOrg:' ',        // Default filter value
-            },
-            {
-              id:2,
-              columnField: "sHId2", // Field to filter
-              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
-              value:generalInfoData.distributionChannel?generalInfoData.distributionChannel:' ',        // Default filter value
-            },
-            {
-              id:3,
-              columnField: "sHDescription2", // Field to filter
-              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
-              value:generalInfoData.division?generalInfoData.division:' ',        // Default filter value
-            },
-          ],
-        })
+     
           setVehiclesShSalesorgAndDistrichnl({
             items: [
               {
@@ -1581,18 +1673,19 @@ setGeneralInfoLoader(false);
         
         // Example logic to update `updated` based on some conditions
         const ignoredFields = ["grandTotal", "taxAmount", "totalAmount"];
-        if (_.isEqual(comments, commentsInitial) && _.isEqual(generalInfoData, generalInfoInitialData) &&  _.isEqual(rows, initialRows) &&  _.isEqual(items, initialItems) ) {
+        if (_.isEqual(comments, commentsInitial)&& _.isEqual(partnerRows, partnerRowsInitial) && _.isEqual(generalInfoData, generalInfoInitialData) &&  _.isEqual(rows, initialRows) &&  _.isEqual(items, initialItems) ) {
           setUpdated(true);
-        }else if(pageState == 'Draft' && _.isEqual(comments, commentsInitial) && _.isEqual(_.omit(generalInfoData, ignoredFields), _.omit(generalInfoInitialData, ignoredFields)) &&  _.isEqual(rows, initialRows) &&  _.isEqual(items, initialItems) ){
+        }else if(pageState == 'Draft'&&  _.isEqual(partnerRows, partnerRowsInitial) && _.isEqual(comments, commentsInitial) && _.isEqual(_.omit(generalInfoData, ignoredFields), _.omit(generalInfoInitialData, ignoredFields)) &&  _.isEqual(rows, initialRows) &&  _.isEqual(items, initialItems) ){
           setUpdated(true);  
           
           }else{
             setUpdated(false);
-            console.log(_.isEqual(comments, commentsInitial) , _.isEqual(generalInfoData, generalInfoInitialData) ,  _.isEqual(rows, initialRows) ,  _.isEqual(items, initialItems) )
+            console.log(_.isEqual(comments, commentsInitial), _.isEqual(partnerRows, partnerRowsInitial) , _.isEqual(generalInfoData, generalInfoInitialData) ,  _.isEqual(rows, initialRows) ,  _.isEqual(items, initialItems) )
           console.log(generalInfoData,generalInfoInitialData)
+          console.log(partnerRows,partnerRowsInitial)
           }
         
-      }, [generalInfoData , rows ,items,comments]);
+      }, [generalInfoData ,partnerRows, rows ,items,comments]);
     const openDialog = () => {
         setIsDialogOpen(true);
       }; 
@@ -1600,22 +1693,8 @@ setGeneralInfoLoader(false);
       const closeDialog = () => {
         setIsDialogOpen(false);
       };
-      const addPartner = async(params)=>{
-        setRows((prevRows) =>
-          prevRows.map((row) =>
-            row.id === partnersSelectedRow ? { ...row, partnerRole: params.row.sHId,partnerNumber:params.row.sHDescription } : row
-          )
-        );
-        setPartnersSelectedRow(null);
-        setPartnersShDialog(false);
-      }
-      const handlePartnersShOpen = async(params)=>{
-        if(pageState=='Draft'){
-          setPartnersSelectedRow(params);
-        setPartnersShDialog(true);
-        }
-        
-      }
+      
+      
       const addFieldFromSh = async(params)=>{
         // setgeneralInfoData({...generalInfoData,documentType:params.row.sHId});
         if((commonShSelectedField == "salesOrg" && params.row.sHId != generalInfoData.salesOrg)||(commonShSelectedField == "distributionChannel" && params.row.sHId != generalInfoData.distributionChannel)||(commonShSelectedField == "division" && params.row.sHId != generalInfoData.division)){                     
@@ -1737,12 +1816,14 @@ flexDirection:'row'}}>
     position: 'sticky'
 }} onClick={async()=>{
   setPageEditable(false);
-  setGeneralInfoLoader(true)
-  setVehiclesLoader(true)
+  setGeneralInfoLoader(true);
+  setVehiclesLoader(true);
+  setPartnersLoader(true);
   setAttachmentsLoader(true)
   let res = await deletePurchaseRequestByUUID(PageId);
-  setGeneralInfoLoader(false)
-  setVehiclesLoader(false)
+  setGeneralInfoLoader(false);
+  setVehiclesLoader(false);
+  setPartnersLoader(false);
   setAttachmentsLoader(false)
   if(res)
   window.history.back();}}>
@@ -1854,12 +1935,13 @@ flexDirection:'row'}}>
 
 
     <section 
-      style={{ marginTop: "12vh", marginLeft: "15vh", marginRight: "15vh" }}
+      style={{ marginTop: "12vh", marginLeft: "15vh", marginRight: "15vh",display: 'flex',gap: '6vh',flexFlow: 'wrap',  justifyContent: 'space-around' }}
     >
       <div className={ objectPageParent == 'Order'?'prSectionO': "prSection"}
         style={{
           // boxShadow: 'rgb(31, 31, 31) 0px 0px 15px',
           borderRadius: '20px',
+          maxWidth: '62%',
           backgroundColor:objectPageParent == 'Order'?'#fffbfb': 'aliceblue',
           display: "flex",
           flexDirection: "column",
@@ -2046,6 +2128,106 @@ color: '#6d6d6d'}}>General Information.</span>
                 </div>
             )}
        
+      </div>
+      <div className={ objectPageParent == 'Order'?'prSectionO': "prSection"}
+        style={{
+          // boxShadow: 'rgb(31, 31, 31) 0px 0px 15px',
+          borderRadius: '20px',
+          height: '-webkit-fill-available',
+          backgroundColor: objectPageParent == 'Order'?'#fffbfb': 'aliceblue',
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+         <div style={{display:'flex',flexDirection:'row'}}>
+          <section
+            style={{
+              boxShadow: '0 0px 15px rgb(0 0 0 / 76%)',
+              borderRadius: '10px',
+              backgroundColor: "#e5c100",
+              width: "90px",
+              height: "90px",
+              textAlign: 'center',
+              alignContent: "center",
+              marginLeft: "80p",
+              marginTop: "-30px",
+              marginLeft: "50px",
+            }}
+          >
+            <Icon path={mdiHandshakeOutline} size={1.5}></Icon>
+          </section>
+          <span style={{    marginTop: 'auto',    marginLeft: '50px',
+marginBottom: '5px',
+fontSize: 'x-large',
+fontFamily: 'auto',
+color: '#6d6d6d'}}>Partners.</span>
+        </div>
+            <div style={{ padding: '30px',  minHeight: '100px',    textAlign: partnersLoader?'center':''}}>
+            {/* <table>
+              <thead>
+                <tr>
+                  <th>Select</th>
+                  <th>Item</th>
+                  <th>Quantity</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><input type="checkbox" value='false' ></input></td>
+                  <td></td>
+                  <td><input type="number" min={1} ></input></td>
+                </tr>
+              </tbody>
+            </table> */}
+            
+<Paper sx={{ height: '400px', width: '100%' }} id="myDataGrid">
+              
+{partnersLoader?(<SpinnerCircularSplit
+              style={{ margin: "auto",padding: '30px',  minHeight: '350px' }}
+              color="rgb(229 193 0)"
+            ></SpinnerCircularSplit>):(
+              <DataGrid
+        key={refreshKey}
+        onSelectionModelChange={(params) => setSelectedRows(params)}
+       rows={partnerRows}
+      
+       columns={partnerColumns}
+       style={{ minWidth: '120px', maxHeight: '550px', width: '100%',overflowY:'scroll',scrollbarWidth: 'thin',
+        scrollbarColor: '#e5c100 #d6d6d6' }}
+              autoHeight
+       disableSelectionOnClick
+      onRowClick={pageEditable ? async (params)=>{
+        console.log(params)
+        
+                      
+          if(generalInfoData.salesOrg && generalInfoData.distributionChannel && generalInfoData.division){
+            let resp = await getPartnersSh(generalInfoData.salesOrg,generalInfoData.distributionChannel,generalInfoData.division);
+            let partners = JSON.parse(resp.data.value);
+            partners.forEach((partner,index)=>{
+              partner.id = (index+1);
+            })
+            setPartnersShFor(params.id);
+            setPartnersSh(partners);
+          }
+          
+          setPartnersShDialog(true)
+      }:undefined}
+ >
+  
+</DataGrid>
+            )}
+
+{/* <DataGrid></DataGrid> */}
+  {/* <DataGrid
+    rows={rows}
+    columns={columns}
+    initialState={{ pagination: { paginationModel } }}
+    pageSizeOptions={[5, 10]}
+    checkboxSelection
+    sx={{ border: 0 }}
+  /> */}
+</Paper>
+            </div>
       </div>
     </section>
     <section  style={{ marginTop: "10vh", marginLeft: "15vh", marginRight: "15vh" }}>
@@ -2705,10 +2887,18 @@ style={{   padding: '10px' ,
     boxShadow: '0px 3px 8px rgb(0 0 0 / 66%)',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease'
     }}
-    onClick={()=>{setgeneralInfoData(generalInfoInitialData);
+    onClick={async()=>{setgeneralInfoData(generalInfoInitialData);
+      debugger
         setRows(initialRows);
         setItems(initialItems);
         setComments(commentsInitial);
+        // let partnerRowsInitial1=[];
+        // partnerRowsInitial.forEach((partnerInitial)=>{
+        //   partnerRowsInitial1.push(partnerInitial)
+        // })
+        // setPartnerRows(partnerRowsInitial1);
+        setPartnerRows(partnerRowsInitial);
+        setVehiclesSh(vehicleShInitial);
     }}
     > <Icon path={mdiFileUndoOutline} size={1} color='white'></Icon> <span style={{    fontFamily: 'auto',
     fontSize: 'x-large',
@@ -2808,99 +2998,6 @@ style={{   padding: '10px' ,
 
 
 </section>}
-{partnersShDialog && <section style={{  height: '100vh',
-    width: '100vw',}}>
-  <div onClick={()=>{setPartnersShDialog(false);setPartnersSelectedRow(null);}} style={{   backdropFilter: 'blur(2px)',
-    backgroundColor: '#87868a8f',
-    height: '-webkit-fill-available',
-    width: '-webkit-fill-available',
-    zIndex: '1100',
-    position: 'fixed',
-    top: '0',
-    left: '0'}}></div>
-  <div
-  style={{
-    zIndex: '1100',
-    position: 'fixed',
-    top: '0', // Ensure it's positioned at the top of the page
-    left: '0', // Align with the left side of the page
-    backgroundColor: '#ffffff',
-    borderRadius: '10px',
-    width: '170vh',
-    height: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    positionArea: 'center'
-  }}
->
-  {/* Header Section */}
-  <h3 style={{ margin: '20px', flex: '0 0 auto' }}>Select Partner</h3>
-
-  {/* Scrollable DataGrid Section */}
-  <Paper style={{ flex: '1 1 auto', overflow: 'hidden' }}>
-    <div style={{ height: '100%', overflowY: 'scroll',scrollbarWidth:'thin' }}>
-      <DataGrid
-
-        rows={partnersSh}
-        columns={columnsPartnersSh}
-        filterModel={partnersShSalesorgAndDistrichnlAndDiv}
-        onFilterModelChange={(newModel) =>
-        {
-          if(newModel.linkOperator)
-            newModel.linkOperator = 'and';
-          let newFilterObj1 =newModel.items.filter((newMod)=>(newMod.columnField!='sHField2' &&newMod.columnField!='sHId2' && newMod.columnField!='sHDescription2'));
-          newFilterObj1=newFilterObj1.map((newfilterobj,index)=>({...newfilterobj,id:index}));
-          if(newFilterObj1.length==0){
-            newFilterObj1.push( 
-              {
-              id:0,
-              columnField: "sHId", // Field to filter
-              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
-              value: "",        // Default filter value
-              }
-          )
-          }
-          let newFilterObj = [...newFilterObj1,
-            {
-              id:1,
-              columnField: "sHField2", // Field to filter
-              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
-              value: generalInfoData.salesOrg?generalInfoData.salesOrg:' ',        // Default filter value
-            },
-            {
-              id:2,
-              columnField: "sHId2", // Field to filter
-              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
-              value:generalInfoData.distributionChannel?generalInfoData.distributionChannel:' ',        // Default filter value
-            },
-            {
-              id:3,
-              columnField: "sHDescription2", // Field to filter
-              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
-              value:generalInfoData.division?generalInfoData.division:' ',        // Default filter value
-            }];
-          newModel.items = newFilterObj;
-          setPartnersShSalesorgAndDistrichnlAndDiv(newModel)}
-        }
-        autoHeight
-        pageSize={15}
-        onRowClick={(params)=>addPartner(params)}
-        // checkboxSelection
-        // disableSelectionOnClick
-        // onSelectionModelChange={(newSelection) => handleSelectionChange(newSelection)}
-      />
-    </div>
-  </Paper>
-
-  {/* Button Section */}
-  <div style={{ padding: '20px', flex: '0 0 auto', textAlign: 'center' }}>
-    {/* <Button onClick={(params)=>addNewRow(params)} style={{    background: '#6d6d6d',
-    color: 'white'}}>Confirm</Button> */}
-  </div>
-</div>
-
-
-</section>}
 {commonShDialog && <section style={{  height: '100vh',
     width: '100vw',}}>
   <div onClick={()=>{setCommonShDialog(false);setCommonShSelected(null);setCommonShSelectedField(null);}} style={{   backdropFilter: 'blur(2px)',
@@ -2955,7 +3052,74 @@ style={{   padding: '10px' ,
 
 
 </section>}
+{partnersShDialog && <section style={{  height: '100vh',
+    width: '100vw',}}>
+  <div onClick={()=>{setPartnersShDialog(false);setCommonShSelected(null);}} style={{   backdropFilter: 'blur(2px)',
+    backgroundColor: '#87868a8f',
+    height: '-webkit-fill-available',
+    width: '-webkit-fill-available',
+    zIndex: '1100',
+    position: 'fixed',
+    top: '0',
+    left: '0'}}></div>
+  <div
+  style={{
+    zIndex: '1100',
+    position: 'fixed',
+    top: '0', // Ensure it's positioned at the top of the page
+    left: '0', // Align with the left side of the page
+    backgroundColor: '#ffffff',
+    borderRadius: '10px',
+    width: '170vh',
+    height: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    positionArea: 'center'
+  }}
+>
+  {/* Header Section */}
+  <h3 style={{ margin: '20px', flex: '0 0 auto' }}>Choose Value</h3>
+  <span style={{    paddingBottom: '10px',
+    paddingLeft: '20px',
+    color: 'gray'}}>Before adding Partners, ensure the Sales Organization , Distribution Channel and Division are correctly set.</span>
+  {/* Scrollable DataGrid Section */}
+  <Paper style={{ flex: '1 1 auto', overflow: 'hidden' }}>
+    <div style={{ height: '100%', overflowY: 'scroll',scrollbarWidth:'thin' }}>
+      <DataGrid
 
+        rows={partnersSh}
+        columns={partnerShColumns}
+        autoHeight
+        pageSize={15}
+        onRowClick={(params)=>{
+          let partners1 =[];
+           partnerRows.forEach((partner)=>{
+            if(partner.id == partnersShFor){
+              let number = params.row.partnerNumber;
+            let name = params.row.partnerName;
+            partners1.push({id:partner.id,partnerName:name,partnerNumber:number,partnerRole:partner.partnerRole});
+            }else
+            partners1.push(partner);
+        });
+          setPartnerRows(partners1);
+        setPartnersShDialog(false);
+        }}
+        // checkboxSelection
+        // disableSelectionOnClick
+        // onSelectionModelChange={(newSelection) => handleSelectionChange(newSelection)}
+      />
+    </div>
+  </Paper>
+
+  {/* Button Section */}
+  <div style={{ padding: '20px', flex: '0 0 auto', textAlign: 'center' }}>
+    {/* <Button onClick={(params)=>addNewRow(params)} style={{    background: '#6d6d6d',
+    color: 'white'}}>Confirm</Button> */}
+  </div>
+</div>
+
+
+</section>}
 
 <footer style={{display: 'flex',
     flexDirection: 'row', backgroundColor: '#030e22' ,    marginTop: '40px',
