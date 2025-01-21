@@ -48,7 +48,7 @@ import { DataGrid, renderEditInputCell, renderEditSingleSelectCell } from "@mate
 import { VerticalTimeline, VerticalTimelineElement } from "react-vertical-timeline-component";
 import { json, useLocation, useNavigate, useParams } from "react-router-dom";
 import { SpinnerCircularSplit, SpinnerDiamond, SpinnerInfinity, SpinnerRomb } from "spinners-react";
-import { createOrder, deleteAndUpdRequestVehiclesByMaterialCode, deleteFiles, deletePurchaseRequestByUUID, deleteRequestVehiclesByMaterialCode, getCommentsByPurchaseEnquiryUuid, getFilesByPurchaseId, getFilesByUrl, getInvoiceOrBillByPurchaseOrderUUID, getPartnersByPurchaseUuid, getPartnersSh, getPurchaseRequestsByCustomerId, getPurchaseRequestsByUUID, getRequestVehiclesByPurchaseEnquiryUuid, getSh, getUserById, getVehiclesInventory, patchGeneralInfo, patchPartnersRows, postFilesPurchaseReq, postRequestVehiclesByMaterialCode } from "../api";
+import { createOrder, deleteAndUpdRequestVehiclesByMaterialCode, deleteFiles, deletePurchaseRequestByUUID, deleteRequestVehiclesByMaterialCode, getCommentsByPurchaseEnquiryUuid, getFilesByPurchaseId, getFilesByUrl, getInvoiceOrBillByPurchaseOrderUUID, getPartnersByPurchaseUuid, getPartnersSh, getPurchaseRequestsByCustomerId, getPurchaseRequestsByUUID, getRequestVehiclesByPurchaseEnquiryUuid, getSh, getUserById, getVehiclesSh, patchGeneralInfo, patchPartnersRows, postFilesPurchaseReq, postRequestVehiclesByMaterialCode } from "../api";
 
 
 
@@ -76,23 +76,6 @@ const[attachmentsLoader,setAttachmentsLoader]=useState(true);
 const [updated,setUpdated]=useState(true);   
 // const updated = false;
 const [vehiclesSh,setVehiclesSh]=useState([]);
-const[vehiclesShSalesorgAndDistrichnl,setVehiclesShSalesorgAndDistrichnl]=useState({
-  items: [
-    {
-      id:1,
-      columnField: "salesOrg", // Field to filter
-      operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
-      value:' ',        // Default filter value
-    },
-    {
-      id:2,
-      columnField: "distributionChnl", // Field to filter
-      operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
-      value:' ',        // Default filter value
-    },
-  ],
-})
-
 const [vehiclesShSelectedRows,setVehiclesShSelectedRows]=useState([]);
 const [vehiclesShDialog,setVehiclesShDialog]=useState(false);
 
@@ -341,6 +324,7 @@ const handleSelectionChange = (selection) => {
         generalInfoInitialData = {
           "companyName": custData.companyName,
           "name": custData.name,
+          "sapCustomerId": custData.sapCustomerId,
           "contactPerson": custData.contactPerson,
           "phoneNumber": custData.phone,
           "emailAddress": custData.email,
@@ -363,6 +347,7 @@ const handleSelectionChange = (selection) => {
         generalInfoInitialData = {
           "companyName": custData.companyName,
           "name": custData.name,
+          "sapCustomerId": custData.sapCustomerId,
           "contactPerson": custData.contactPerson,
           "phoneNumber": custData.phone,
           "emailAddress": custData.email,
@@ -380,16 +365,16 @@ const handleSelectionChange = (selection) => {
 
         setgeneralInfoData(generalInfoInitialData);
         setGeneralInfoLoader(false);
-        let vehicleInvData = await getVehiclesInventory();
-        let vehicleInvDataSh = [];
-        vehicleInvData.data.value.forEach((element,index) => {
-          let vhData ={id:index,vehicleCode:element.vehicleCode,distributionChnl:element.distributionChnl,salesOrg:element.salesOrg,vehicleName:element.vehicleName,vehicleColor:element.vehicleColor,quantity:1};
-          vehicleInvDataSh.push(vhData);
-          if(!vehicleShInitial.some((veh)=>veh.id == index)){
-            vehicleShInitial.push(vhData);
-          }
-        });
-        setVehiclesSh(vehicleInvDataSh);
+        // let vehicleInvData = await getVehiclesInventory();
+        // let vehicleInvDataSh = [];
+        // vehicleInvData.data.value.forEach((element,index) => {
+        //   let vhData ={id:index,vehicleCode:element.vehicleCode,distributionChnl:element.distributionChnl,salesOrg:element.salesOrg,vehicleName:element.vehicleName,vehicleColor:element.vehicleColor,quantity:1};
+        //   vehicleInvDataSh.push(vhData);
+        //   if(!vehicleShInitial.some((veh)=>veh.id == index)){
+        //     vehicleShInitial.push(vhData);
+        //   }
+        // });
+        // setVehiclesSh(vehicleInvDataSh);
 
         // let paartnersData = await getSh('Paartners');
         let salesOrgData = await getSh('Sales Organisation');
@@ -450,6 +435,22 @@ const handleSelectionChange = (selection) => {
     //  ];
     if(initialRows == null ||initialRows == undefined)
       initialRows =[];
+    
+    if(generalInfoInitialData.salesOrg && generalInfoInitialData.distributionChannel){
+    let newVehicleSh = await getVehiclesSh(generalInfoInitialData.salesOrg,generalInfoInitialData.distributionChannel)
+          let vehicleInvData =JSON.parse(newVehicleSh.data.value);
+           let vehicleInvDataSh =[];
+        
+        vehicleInvData.forEach((element,index) => {
+          if(! initialRows.some((initialRow)=>initialRow.vehicleCode == element.vehicleCode)){
+          let vhData ={id:index,vehicleCode:element.vehicleCode,vehicleName:element.vehicleName,vehicleColor:element.vehicleColor,quantity:1};
+          vehicleInvDataSh.push(vhData);
+        }
+        });
+        setVehiclesSh(vehicleInvDataSh);
+        vehicleShInitial = vehicleInvDataSh;
+      }
+
      setRows(initialRows);
      if(initialRows1.length!=initialRows.length)
       initialRows.forEach((row)=>{
@@ -1112,6 +1113,7 @@ if (value === "") value = "0";
             generalInfoInitialData = {
               "companyName": custData.companyName,
               "name": custData.name,
+              "sapCustomerId": custData.sapCustomerId,
               "contactPerson": custData.contactPerson,
               "phoneNumber": custData.phone,
               "emailAddress": custData.email,
@@ -1501,6 +1503,7 @@ setGeneralInfoLoader(false);
         setPartnersLoader(false);
         setAttachmentsLoader(false);
             setPageState("In Process");
+            window.history.back();
             resolve();//deploy
           }//deploy
           })
@@ -1530,6 +1533,7 @@ setGeneralInfoLoader(false);
                 await patchGeneralInfo(PageId,{rzpOrderId:orderId},objectPageParent);
                 requestQuotationCallBack(response.razorpay_payment_id);
                 console.log(response); // Handle success
+                window.history.back();
               },
               prefill: {
                 name: generalInfoData.name,
@@ -1588,6 +1592,8 @@ setGeneralInfoLoader(false);
       setVehiclesShDialog(false);
       newVehicles.forEach(async (newVeh,index) =>{
         newVeh.id = rows.length + (index + 1);
+        newVeh.preferredDelLocation = '';
+        newVeh.preferredDelDate = '';
 // const newRow = {id: rows.length + 1 ,vehicleCode:newVeh.vehicleCode,vehicleName:newVeh.vehicleName,vehicleColor:newVeh.vehicleColor};
 
       })
@@ -1603,6 +1609,8 @@ setGeneralInfoLoader(false);
                     id: index + 1, // Reassign IDs starting from 1
                 }));
               let newVehicleSh = rows.filter((row)=>filteredRows.some((fRow)=>fRow.vehicleCode !=  row.vehicleCode) );
+              if(newVehicleSh.length == 0)
+                newVehicleSh = [...rows]
               newVehicleSh.forEach((newVh,index)=>{
                 newVh.id = index+1;
                 newVh.quantity = 1;
@@ -1654,22 +1662,22 @@ setGeneralInfoLoader(false);
          
         }
      
-          setVehiclesShSalesorgAndDistrichnl({
-            items: [
-              {
-                id:1,
-                columnField: "salesOrg", // Field to filter
-                operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
-                value: generalInfoData.salesOrg?generalInfoData.salesOrg:' ',        // Default filter value
-              },
-              {
-                id:2,
-                columnField: "distributionChnl", // Field to filter
-                operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
-                value:generalInfoData.distributionChannel?generalInfoData.distributionChannel:' ',        // Default filter value
-              },
-            ],
-          });
+          // setVehiclesShSalesorgAndDistrichnl({
+          //   items: [
+          //     {
+          //       id:1,
+          //       columnField: "salesOrg", // Field to filter
+          //       operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+          //       value: generalInfoData.salesOrg?generalInfoData.salesOrg:' ',        // Default filter value
+          //     },
+          //     {
+          //       id:2,
+          //       columnField: "distributionChnl", // Field to filter
+          //       operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+          //       value:generalInfoData.distributionChannel?generalInfoData.distributionChannel:' ',        // Default filter value
+          //     },
+          //   ],
+          // });
         
         // Example logic to update `updated` based on some conditions
         const ignoredFields = ["grandTotal", "taxAmount", "totalAmount"];
@@ -1698,21 +1706,49 @@ setGeneralInfoLoader(false);
       const addFieldFromSh = async(params)=>{
         // setgeneralInfoData({...generalInfoData,documentType:params.row.sHId});
         if((commonShSelectedField == "salesOrg" && params.row.sHId != generalInfoData.salesOrg)||(commonShSelectedField == "distributionChannel" && params.row.sHId != generalInfoData.distributionChannel)||(commonShSelectedField == "division" && params.row.sHId != generalInfoData.division)){                     
-          let newVehicleSh = rows.map((newVh, index) => {
-            return {
-              ...newVh,        // Spread the properties of the existing object
-              id: index + 1,   // Add the `id` property
-              quantity: 1,     // Add the `quantity` property
-            };
-          });
+          // let newVehicleSh = rows.map((newVh, index) => {
+          //   return {
+          //     ...newVh,        // Spread the properties of the existing object
+          //     id: index + 1,   // Add the `id` property
+          //     quantity: 1,     // Add the `quantity` property
+          //   };
+          // });
           
-          vehiclesSh.forEach((vSh,index)=>{
-            vSh.id = newVehicleSh.length + (index+1);
+          // vehiclesSh.forEach((vSh,index)=>{
+          //   vSh.id = newVehicleSh.length + (index+1);
             
-            newVehicleSh.push(vSh);
-          })
-          setVehiclesSh(newVehicleSh);
+          //   newVehicleSh.push(vSh);
+          // })
+
+          let resetAlertMsg =  "Changes in the field caused the Partners table data to reset. Please review the table.";
+
+if( (commonShSelectedField == "salesOrg" && params.row.sHId != generalInfoData.salesOrg)||(commonShSelectedField == "distributionChannel" && params.row.sHId != generalInfoData.distributionChannel)){
+  let salesorg =       generalInfoData.salesOrg;
+  let distributionChannel =   generalInfoData.distributionChannel;
+  if(commonShSelectedField == "salesOrg")
+    salesorg = params.row.sHId;
+  else
+  distributionChannel =  params.row.sHId;
+          let newVehicleSh = await getVehiclesSh(salesorg,distributionChannel)
+          let vehicleInvData =JSON.parse(newVehicleSh.data.value);
+           let vehicleInvDataSh =[];
+        
+        vehicleInvData.forEach((element,index) => {
+          let vhData ={id:index,vehicleCode:element.vehicleCode,vehicleName:element.vehicleName,vehicleColor:element.vehicleColor,quantity:1};
+          vehicleInvDataSh.push(vhData);
+        });
+        
+        setVehiclesSh(vehicleInvDataSh);
+          // setVehiclesSh(newVehicleSh);
+          resetAlertMsg =  "Changes in the field caused the 'Partners.' and 'List of Items.' table data to reset. Please review the table.";
           setRows([]);
+      }
+        let newPartnerRows=[]
+          partnerRows.forEach((partner)=>{
+            newPartnerRows.push({...partner,partnerNumber:generalInfoData.sapCustomerId,partnerName:generalInfoData.name})
+          })
+          setPartnerRows(newPartnerRows);
+          alert(resetAlertMsg);
         }
         if(commonShSelectedField == "salesOrg" && params.row.sHId != generalInfoData.salesOrg){
           setgeneralInfoData((prev) => ({
@@ -2945,39 +2981,39 @@ style={{   padding: '10px' ,
 
         rows={vehiclesSh}
         columns={columnsVehicleSh}
-        filterModel={vehiclesShSalesorgAndDistrichnl}
-        onFilterModelChange={(newModel) =>
-        {
-          if(newModel.linkOperator)
-            newModel.linkOperator = 'and';
-          let newFilterObj1 =newModel.items.filter((newMod)=>(newMod.columnField!='salesOrg' &&newMod.columnField!='distributionChnl'));
-          newFilterObj1=newFilterObj1.map((newfilterobj,index)=>({...newfilterobj,id:index}));
-          if(newFilterObj1.length==0){
-            newFilterObj1.push( 
-              {
-              id:0,
-              columnField: "vehicleCode", // Field to filter
-              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
-              value: "",        // Default filter value
-              }
-          )
-          }
-          let newFilterObj = [...newFilterObj1,
-            {
-              id:1,
-              columnField: "salesOrg", // Field to filter
-              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
-              value: generalInfoData.salesOrg?generalInfoData.salesOrg:' ',        // Default filter value
-            },
-            {
-              id:2,
-              columnField: "distributionChnl", // Field to filter
-              operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
-              value:generalInfoData.distributionChannel?generalInfoData.distributionChannel:' ',        // Default filter value
-            }];
-          newModel.items = newFilterObj;
-          setVehiclesShSalesorgAndDistrichnl(newModel)}
-        }
+        // filterModel={vehiclesShSalesorgAndDistrichnl}
+        // onFilterModelChange={(newModel) =>
+        // {
+        //   if(newModel.linkOperator)
+        //     newModel.linkOperator = 'and';
+        //   let newFilterObj1 =newModel.items.filter((newMod)=>(newMod.columnField!='salesOrg' &&newMod.columnField!='distributionChnl'));
+        //   newFilterObj1=newFilterObj1.map((newfilterobj,index)=>({...newfilterobj,id:index}));
+        //   if(newFilterObj1.length==0){
+        //     newFilterObj1.push( 
+        //       {
+        //       id:0,
+        //       columnField: "vehicleCode", // Field to filter
+        //       operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+        //       value: "",        // Default filter value
+        //       }
+        //   )
+        //   }
+        //   let newFilterObj = [...newFilterObj1,
+        //     {
+        //       id:1,
+        //       columnField: "salesOrg", // Field to filter
+        //       operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+        //       value: generalInfoData.salesOrg?generalInfoData.salesOrg:' ',        // Default filter value
+        //     },
+        //     {
+        //       id:2,
+        //       columnField: "distributionChnl", // Field to filter
+        //       operatorValue: "equals", // Operator (e.g., "equals", "contains", etc.)
+        //       value:generalInfoData.distributionChannel?generalInfoData.distributionChannel:' ',        // Default filter value
+        //     }];
+        //   newModel.items = newFilterObj;
+        //   setVehiclesShSalesorgAndDistrichnl(newModel)}
+        // }
          
         autoHeight
         pageSize={15}

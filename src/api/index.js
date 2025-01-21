@@ -1,11 +1,60 @@
 import axios from "axios";
 import { Callbacks } from "jquery";
 
+const tokenURL = 'https://44f10b5ftrial.authentication.us10.hana.ondemand.com/oauth/token'; // Replace with your XSUAA token URL
+const clientId = 'sb-Mahindra_sales-44f10b5ftrial-dev1!t369427';
+const clientSecret = 'b60ebdcc-3dbb-449e-b0f6-f32b50151396$mwrsB0Ik71GDhwRBFFCDHyFdKlw8B3AJ9WTI3zrTkUQ=';
+const username = 'pradeep.n@peolsolutions.com'; // Replace with the username
+const password = 'Pradeep@123'; // Replace with the password
+
+const getAccessToken = async () => {
+  const credentials = btoa(`${clientId}:${clientSecret}`); // Base64 encode client_id:client_secret
+
+  try {
+    const response = await axios.post(
+      tokenURL,
+      new URLSearchParams({
+        grant_type: 'password', // Use password grant type
+        username: username,
+        password: password,
+      }).toString(), // Serialize the body
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Authorization: `Basic ${credentials}`, // Pass client credentials in the Authorization header
+        },
+      }
+    );
+
+    return response.data.access_token; // Return the token
+  } catch (error) {
+    console.error('Error fetching access token:', error.response?.data || error.message);
+    throw new Error('Unable to fetch access token');
+  }
+};
+
+
 const baseURL = "https://44f10b5ftrial-dev1-mahindra-sales-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/my/";
 
 const instance = axios.create({
   baseURL
 });
+instance.interceptors.request.use(
+  async (config) => {
+    try {
+      const token = await getAccessToken(); // Get the token dynamically
+      config.headers.Authorization = `Bearer ${token}`; // Add the token to the headers
+    } catch (error) {
+      console.error('Error adding Authorization header:', error.message);
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// export default instance;
+
+
 
 export const getTableData = async () => {
   const { data } = await instance.get("/PAN_Details_APR");
@@ -54,11 +103,11 @@ export const getPurchaseRequestsByUUID = async (UUID,objectPageParent)=>{
   }
 
 };
-export const getVehiclesInventory = async ()=>{
-  let url =`VehicleInventory`;
-  const data = await instance.get(url);
-  return data.value || data;
-  };
+// export const getVehiclesInventory = async ()=>{
+//   let url =`VehicleInventory`;
+//   const data = await instance.get(url);
+//   return data.value || data;
+//   };
   export const patchGeneralInfo = async (purchaseEnquiryUuid,body,entity)=>{
     if(entity == 'Order'){
       let url =`PurchaseOrder(purchaseOrderUuid=${purchaseEnquiryUuid},IsActiveEntity=true)`;
@@ -156,7 +205,8 @@ export const getVehiclesInventory = async ()=>{
     
           for (let i = 0; i < vehicles.length; i++) {
             let vehicle = vehicles[i];
-            let body = { materialCode: vehicle.vehicleCode, quantity: vehicle.quantity, IsActiveEntity: true };
+            
+            let body = { materialCode: vehicle.vehicleCode, quantity: vehicle.quantity,preferredDelDate:vehicle.preferredDelDate,preferredDelLocation:vehicle.preferredDelLocation, IsActiveEntity: true };
             let postRes = await instance.post(url, body);
             console.log(postRes);
           }
@@ -211,6 +261,11 @@ export const getVehiclesInventory = async ()=>{
           const res = await instance.get(url);
           return res.value || res;
           };
+          export const getVehiclesSh = async (salesOrg,distributionChannels)=>{
+            let url =`getVehiclesSh(paramaters='{"distributionChannels":"${distributionChannels}","salesOrg":"${salesOrg}"}')`;
+            const res = await instance.get(url);
+            return res.value || res;
+            };
           export const patchPartnersRows = async (purchaseEnquiryUuid,partnerRole,body)=>{
             let url =`PurchaseEnquiry(purchaseEnquiryUuid=${purchaseEnquiryUuid},IsActiveEntity=true)/enquiryToPartners(purchaseEnquiryUuid=${purchaseEnquiryUuid},partnerRole='${partnerRole}',IsActiveEntity=true)`;
             const res = await instance.patch(url,body);
